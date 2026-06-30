@@ -300,13 +300,11 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 
 // GetDiff 获取指定文件的 diff
 func (a *App) GetDiff(sessionID, filePath string) (string, error) {
-	// 检查文件是否存在
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return "", fmt.Errorf("文件不存在: %s (文件可能已被移动或删除)", filepath.Base(filePath))
-	}
-
 	// 如果文件路径是绝对路径，使用文件所在目录查找 Git 仓库
 	if filepath.IsAbs(filePath) {
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			return "", fmt.Errorf("文件不存在: %s (文件可能已被移动或删除)", filepath.Base(filePath))
+		}
 		dir := filepath.Dir(filePath)
 		gitRoot, err := diff.FindGitRoot(dir)
 		if err == nil {
@@ -371,12 +369,20 @@ func (a *App) GetDiff(sessionID, filePath string) (string, error) {
 	}
 
 	diffEngine := diff.NewEngine(gitRoot)
-	// 将文件路径转换为相对于 git 根目录的路径
-	relPath, err := filepath.Rel(gitRoot, filePath)
-	if err != nil {
-		// 如果无法计算相对路径，尝试使用文件名作为最后手段
-		relPath = filepath.Base(filePath)
+
+	// 根据路径类型处理
+	var relPath string
+	if filepath.IsAbs(filePath) {
+		// 绝对路径：转换为相对于 git 根目录的路径
+		relPath, err = filepath.Rel(gitRoot, filePath)
+		if err != nil {
+			relPath = filepath.Base(filePath)
+		}
+	} else {
+		// 相对路径：直接使用（已经是相对于工作目录的路径）
+		relPath = filePath
 	}
+
 	patch, err := diffEngine.GetFilePatch(relPath)
 	if err != nil {
 		return "", fmt.Errorf("获取 diff 失败 (文件: %s): %w", relPath, err)

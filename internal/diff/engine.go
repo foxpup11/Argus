@@ -6,10 +6,18 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"agentscope-desktop/internal/session"
 )
+
+// 创建隐藏窗口的exec.Command（仅Windows）
+func newGitCommand(args ...string) *exec.Cmd {
+	cmd := exec.Command("git", args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	return cmd
+}
 
 // Engine Git Diff 引擎
 type Engine struct {
@@ -42,7 +50,7 @@ func (e *Engine) GetDiff(from, to string) ([]DiffResult, error) {
 	}
 	args = append(args, "--numstat")
 
-	cmd := exec.Command("git", args...)
+	cmd := newGitCommand(args...)
 	cmd.Dir = e.WorkDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -56,7 +64,7 @@ func (e *Engine) GetDiff(from, to string) ([]DiffResult, error) {
 func (e *Engine) GetDiffBetweenRefs(fromRef, toRef string) ([]DiffResult, error) {
 	args := []string{"diff", fromRef, toRef, "--numstat"}
 
-	cmd := exec.Command("git", args...)
+	cmd := newGitCommand(args...)
 	cmd.Dir = e.WorkDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -71,7 +79,7 @@ func (e *Engine) GetUncommittedDiff() ([]DiffResult, error) {
 	var results []DiffResult
 
 	// 1. 获取已跟踪文件的改动 (git diff)
-	cmd := exec.Command("git", "diff", "--numstat")
+	cmd := newGitCommand("diff", "--numstat")
 	cmd.Dir = e.WorkDir
 	output, err := cmd.Output()
 	if err == nil {
@@ -80,7 +88,7 @@ func (e *Engine) GetUncommittedDiff() ([]DiffResult, error) {
 	}
 
 	// 2. 获取已暂存文件的改动 (git diff --cached)
-	cmd = exec.Command("git", "diff", "--cached", "--numstat")
+	cmd = newGitCommand("diff", "--cached", "--numstat")
 	cmd.Dir = e.WorkDir
 	output, err = cmd.Output()
 	if err == nil {
@@ -89,7 +97,7 @@ func (e *Engine) GetUncommittedDiff() ([]DiffResult, error) {
 	}
 
 	// 3. 获取未跟踪的新文件 (git ls-files --others --exclude-standard)
-	cmd = exec.Command("git", "ls-files", "--others", "--exclude-standard")
+	cmd = newGitCommand("ls-files", "--others", "--exclude-standard")
 	cmd.Dir = e.WorkDir
 	output, err = cmd.Output()
 	if err == nil {
@@ -124,7 +132,7 @@ func (e *Engine) GetUncommittedDiff() ([]DiffResult, error) {
 
 // GetStagedDiff 获取已暂存的改动
 func (e *Engine) GetStagedDiff() ([]DiffResult, error) {
-	cmd := exec.Command("git", "diff", "--cached", "--numstat")
+	cmd := newGitCommand("diff", "--cached", "--numstat")
 	cmd.Dir = e.WorkDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -136,7 +144,7 @@ func (e *Engine) GetStagedDiff() ([]DiffResult, error) {
 
 // GetFilePatch 获取单个文件的完整 patch
 func (e *Engine) GetFilePatch(filePath string) (string, error) {
-	cmd := exec.Command("git", "diff", "--", filePath)
+	cmd := newGitCommand("diff", "--", filePath)
 	cmd.Dir = e.WorkDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -193,7 +201,7 @@ func (e *Engine) GetDiffWithActions(actions []session.Action) ([]DiffResult, err
 // GetDiffBetweenSession 获取会话前后的 diff
 func (e *Engine) GetDiffBetweenSession(sess *session.Session) ([]DiffResult, error) {
 	// 1. 首先获取所有 reflog，找到会话开始前的 commit
-	cmd := exec.Command("git", "reflog", "--format=%H %ci")
+	cmd := newGitCommand("reflog", "--format=%H %ci")
 	cmd.Dir = e.WorkDir
 	reflogOutput, err := cmd.Output()
 	if err != nil {
@@ -209,7 +217,7 @@ func (e *Engine) GetDiffBetweenSession(sess *session.Session) ([]DiffResult, err
 	}
 
 	// 2. 获取当前 HEAD（在找到会话前的 ref 之后）
-	cmd = exec.Command("git", "rev-parse", "HEAD")
+	cmd = newGitCommand("rev-parse", "HEAD")
 	cmd.Dir = e.WorkDir
 	headOutput, err := cmd.Output()
 	if err != nil {
@@ -356,7 +364,7 @@ func FindGitRoot(startDir string) (string, error) {
 
 // GetStatus 获取 git 状态
 func (e *Engine) GetStatus() (map[string]string, error) {
-	cmd := exec.Command("git", "status", "--porcelain")
+	cmd := newGitCommand("status", "--porcelain")
 	cmd.Dir = e.WorkDir
 	output, err := cmd.Output()
 	if err != nil {
