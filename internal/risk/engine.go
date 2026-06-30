@@ -31,6 +31,14 @@ func (e *Engine) loadDefaultRules() {
 	e.rules = []Rule{
 		// 🔴 Danger 规则
 		{
+			Name:        "delete_file",
+			Description: "删除文件（危险操作）",
+			Level:       session.RiskDanger,
+			Check: func(fc session.FileChange) bool {
+				return fc.ChangeType == session.ChangeDeleted
+			},
+		},
+		{
 			Name:        "secret_file",
 			Description: "修改了包含敏感信息的文件",
 			Level:       session.RiskDanger,
