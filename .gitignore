@@ -54,8 +54,12 @@ coverage.txt
 # 日志文件
 logs/
 
-# 开发文档（不上传）
+# 开发日志（不上传）
 doc/CHANGELOG.md
+
+# 文档（保留 docs/images/）
+doc/*
+!doc/images/
 
 # 测试文件（保留核心测试，删除其他）
 *_test.go
