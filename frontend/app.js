@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     initI18n();
     initMonitoring();
+    initTheme(); // 初始化主题
 
     // 每 2 分钟后台静默刷新会话列表
     setInterval(silentRefreshSessions, 120000);
@@ -49,6 +50,18 @@ function sessionsChanged(oldSessions, newSessions) {
 function initI18n() {
     updateLangToggle();
     updateUI();
+}
+
+// 初始化主题
+async function initTheme() {
+    try {
+        const settings = await window.go.main.App.GetSettings();
+        if (settings && settings.theme) {
+            applyTheme(settings.theme);
+        }
+    } catch (error) {
+        // 静默失败，使用默认主题
+    }
 }
 
 // 监控状态
@@ -529,14 +542,14 @@ function renderCustomRules() {
         return;
     }
 
-    container.innerHTML = currentSettings.customRules.map(rule => `
+    container.innerHTML = currentSettings.customRules.map((rule, index) => `
         <div class="rule-item">
             <div class="rule-info">
                 <div class="rule-name">${escapeHtml(rule.name)}</div>
                 <div class="rule-desc">${escapeHtml(rule.description)}</div>
             </div>
-            <span class="rule-level ${rule.level.toLowerCase()}">${rule.level}</span>
-            <button class="rule-delete" onclick="deleteRule('${escapeHtmlAttr(rule.name)}')" title="${t('deleteRule')}">
+            <span class="rule-level ${(rule.level || 'review').toLowerCase()}">${rule.level || 'Review'}</span>
+            <button class="rule-delete" data-rule-index="${index}" title="${t('deleteRule')}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"/>
                     <line x1="6" y1="6" x2="18" y2="18"/>
@@ -544,6 +557,16 @@ function renderCustomRules() {
             </button>
         </div>
     `).join('');
+
+    // 使用事件委托绑定删除按钮事件
+    container.querySelectorAll('.rule-delete').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(btn.getAttribute('data-rule-index'));
+            if (!isNaN(index) && currentSettings.customRules[index]) {
+                deleteRule(currentSettings.customRules[index].name);
+            }
+        });
+    });
 }
 
 // 显示添加规则表单（简化版：使用 prompt）

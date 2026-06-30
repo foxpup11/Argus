@@ -432,7 +432,12 @@ func (a *App) GetSessionDiff(sessionID string, mode DiffMode) (*DiffInfo, error)
 		patch := d.Patch
 		// 如果没有 patch，尝试获取
 		if patch == "" {
-			patch, _ = diffEngine.GetFilePatch(d.FilePath)
+			// 确保文件路径是相对于 git 根目录的
+			relPath, err := filepath.Rel(gitRoot, d.FilePath)
+			if err != nil {
+				relPath = d.FilePath
+			}
+			patch, _ = diffEngine.GetFilePatch(relPath)
 		}
 
 		diffInfos = append(diffInfos, DiffFileInfo{

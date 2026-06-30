@@ -76,6 +76,15 @@ const i18n = {
         customRules: '自定义风险规则',
         addRule: '添加规则',
         deleteRule: '删除',
+        noRules: '暂无自定义规则',
+        ruleNamePlaceholder: '规则名称:',
+        ruleDescPlaceholder: '规则描述:',
+        ruleLevelPlaceholder: '风险等级 (safe/review/danger):',
+        rulePatternPlaceholder: '文件路径匹配模式:',
+        invalidLevel: '无效的风险等级',
+        ruleAdded: '规则已添加',
+        confirmDelete: '确定要删除这个规则吗？',
+        ruleDeleted: '规则已删除',
     },
     en: {
         // Header
@@ -153,6 +162,15 @@ const i18n = {
         customRules: 'Custom Risk Rules',
         addRule: 'Add Rule',
         deleteRule: 'Delete',
+        noRules: 'No custom rules',
+        ruleNamePlaceholder: 'Rule name:',
+        ruleDescPlaceholder: 'Rule description:',
+        ruleLevelPlaceholder: 'Risk level (safe/review/danger):',
+        rulePatternPlaceholder: 'File path pattern:',
+        invalidLevel: 'Invalid risk level',
+        ruleAdded: 'Rule added',
+        confirmDelete: 'Are you sure you want to delete this rule?',
+        ruleDeleted: 'Rule deleted',
     }
 };
 
