@@ -64,6 +64,9 @@ func (r *Reader) Read(path string) (*session.Session, error) {
 		AgentType: "claude-code",
 	}
 
+	// 追踪最后一条消息的时间戳，用于计算会话持续时间
+	var lastTime time.Time
+
 	scanner := bufio.NewScanner(file)
 	// 增加缓冲区到 50MB，支持大型会话日志
 	const maxScanTokenSize = 50 * 1024 * 1024
@@ -85,6 +88,11 @@ func (r *Reader) Read(path string) (*session.Session, error) {
 
 		// 解析时间戳
 		ts, _ := time.Parse(time.RFC3339Nano, event.Timestamp)
+
+		// 更新最后一条消息的时间戳
+		if !ts.IsZero() {
+			lastTime = ts
+		}
 
 		// 提取会话元数据
 		if event.SessionID != "" && sess.ID == "" {
@@ -161,7 +169,14 @@ func (r *Reader) Read(path string) (*session.Session, error) {
 	if sess.StartedAt.IsZero() {
 		sess.StartedAt = time.Now()
 	}
-	sess.Duration = time.Since(sess.StartedAt)
+
+	// 使用最后一条消息的时间戳计算会话持续时间
+	// 如果没有有效的时间戳，回退到当前时间
+	if lastTime.IsZero() || lastTime.Before(sess.StartedAt) {
+		sess.Duration = time.Since(sess.StartedAt)
+	} else {
+		sess.Duration = lastTime.Sub(sess.StartedAt)
+	}
 
 	return sess, scanner.Err()
 }

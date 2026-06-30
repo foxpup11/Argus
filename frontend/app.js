@@ -41,9 +41,13 @@ function sessionsChanged(oldSessions, newSessions) {
     if (oldSessions.length === 0) {
         return false;
     }
-    // 比较第一个和最后一个会话的 ID（假设按时间排序）
-    return oldSessions[0].id !== newSessions[0].id ||
-           oldSessions[oldSessions.length - 1].id !== newSessions[newSessions.length - 1].id;
+    // 比较所有会话的 ID，确保中间的变化也能检测到
+    for (let i = 0; i < oldSessions.length; i++) {
+        if (oldSessions[i].id !== newSessions[i].id) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // 初始化国际化
@@ -466,12 +470,20 @@ function switchDiffMode(mode) {
 // ============================================
 
 let currentSettings = null;
+let settingsModalAnimating = false; // 防止动画期间重复触发
 
 // 打开设置面板
 async function openSettings() {
+    // 如果动画正在进行，忽略本次触发
+    if (settingsModalAnimating) return;
+
     const modal = document.getElementById('settingsModal');
+    settingsModalAnimating = true;
     modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('show'), 10);
+    setTimeout(() => {
+        modal.classList.add('show');
+        settingsModalAnimating = false;
+    }, 10);
 
     // 加载设置
     try {
@@ -484,9 +496,16 @@ async function openSettings() {
 
 // 关闭设置面板
 function closeSettings() {
+    // 如果动画正在进行，忽略本次触发
+    if (settingsModalAnimating) return;
+
     const modal = document.getElementById('settingsModal');
+    settingsModalAnimating = true;
     modal.classList.remove('show');
-    setTimeout(() => modal.style.display = 'none', 200);
+    setTimeout(() => {
+        modal.style.display = 'none';
+        settingsModalAnimating = false;
+    }, 200);
 }
 
 // 渲染设置

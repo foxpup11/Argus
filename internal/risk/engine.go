@@ -70,9 +70,17 @@ func (e *Engine) loadDefaultRules() {
 			Description: "改动超过 500 行",
 			Level:       session.RiskDanger,
 			Check: func(fc session.FileChange) bool {
-				// 简单计算 diff 行数
+				// 计算实际的代码变更行数（以+或-开头，排除+++和---）
 				lines := strings.Split(fc.Diff, "\n")
-				return len(lines) > 500
+				changeCount := 0
+				for _, line := range lines {
+					if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
+						changeCount++
+					} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
+						changeCount++
+					}
+				}
+				return changeCount > 500
 			},
 		},
 		{

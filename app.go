@@ -374,12 +374,12 @@ func (a *App) GetDiff(sessionID, filePath string) (string, error) {
 	// 将文件路径转换为相对于 git 根目录的路径
 	relPath, err := filepath.Rel(gitRoot, filePath)
 	if err != nil {
-		// 如果无法计算相对路径，使用原始路径
-		relPath = filePath
+		// 如果无法计算相对路径，尝试使用文件名作为最后手段
+		relPath = filepath.Base(filePath)
 	}
 	patch, err := diffEngine.GetFilePatch(relPath)
 	if err != nil {
-		return "", fmt.Errorf("获取 diff 失败: %w", err)
+		return "", fmt.Errorf("获取 diff 失败 (文件: %s): %w", relPath, err)
 	}
 
 	return patch, nil
