@@ -257,6 +257,22 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 
 // GetDiff 获取指定文件的 diff
 func (a *App) GetDiff(sessionID, filePath string) (string, error) {
+	// 如果文件路径是绝对路径，使用文件所在目录查找 Git 仓库
+	if filepath.IsAbs(filePath) {
+		dir := filepath.Dir(filePath)
+		gitRoot, err := diff.FindGitRoot(dir)
+		if err == nil {
+			diffEngine := diff.NewEngine(gitRoot)
+			// 使用相对路径
+			relPath, _ := filepath.Rel(gitRoot, filePath)
+			patch, err := diffEngine.GetFilePatch(relPath)
+			if err == nil {
+				return patch, nil
+			}
+		}
+	}
+
+	// 回退：从会话中获取工作目录
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("获取用户目录失败: %w", err)
