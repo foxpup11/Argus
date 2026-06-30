@@ -159,6 +159,19 @@ body {
     transform: translateX(-50%) translateY(0);
 }
 
+/* Table Header Actions */
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Small Button */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
 /* Language Toggle - iOS Style */
 .lang-toggle {
     position: relative;

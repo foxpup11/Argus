@@ -45,12 +45,13 @@ type Action struct {
 
 // FileChange 一个文件的改动
 type FileChange struct {
-	Path       string
-	ChangeType ChangeType  // Created, Modified, Deleted
-	Actions    []Action    // 导致这个改动的 Agent 操作
-	Diff       string      // unified diff 内容
-	Risk       RiskLevel   // Safe / Review / Danger
-	RiskReason string      // 为什么标注这个风险等级
+	Path        string
+	ChangeType  ChangeType  // Created, Modified, Deleted
+	Actions     []Action    // 导致这个改动的 Agent 操作
+	Diff        string      // unified diff 内容
+	Risk        RiskLevel   // Safe / Review / Danger
+	RiskReason  string      // 为什么标注这个风险等级
+	ActionCount int         // 操作次数（用于导出）
 }
 
 // TokenUsage 记录 token 消耗

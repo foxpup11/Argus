@@ -103,6 +103,39 @@ function showToast(message) {
     }, 3000);
 }
 
+// 导出功能
+async function exportSession() {
+    if (!currentSessionId) {
+        showToast(t('selectSessionFirst'));
+        return;
+    }
+
+    try {
+        // 直接弹出目录选择对话框
+        const path = await window.go.main.App.SelectDirectory();
+        if (!path) {
+            // 用户取消了选择
+            return;
+        }
+
+        showToast(t('exporting'));
+
+        // 调用导出 API，传递选择的路径
+        const result = await window.go.main.App.ExportSession(
+            currentSessionId,
+            'markdown',
+            path
+        );
+
+        if (result && result.filePath) {
+            showToast(t('exportSuccess'));
+        }
+    } catch (error) {
+        console.error('导出会话失败:', error);
+        showToast(t('exportFailed') + ': ' + error);
+    }
+}
+
 // 更新语言切换按钮
 function updateLangToggle() {
     const toggle = document.getElementById('langToggle');

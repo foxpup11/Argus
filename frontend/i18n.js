@@ -14,6 +14,13 @@ const i18n = {
         monitoringFailed: '监控启动失败',
         sessionUpdated: '检测到新会话',
 
+        // 导出功能
+        export: '导出',
+        exporting: '正在导出...',
+        exportSuccess: '导出成功',
+        exportFailed: '导出失败',
+        selectSessionFirst: '请先选择一个会话',
+
         // 侧边栏
         sessions: '会话',
         searchPlaceholder: '搜索...',
@@ -71,6 +78,13 @@ const i18n = {
         monitoringStopped: 'Monitoring stopped',
         monitoringFailed: 'Failed to start monitoring',
         sessionUpdated: 'New session detected',
+
+        // Export
+        export: 'Export',
+        exporting: 'Exporting...',
+        exportSuccess: 'Export successful',
+        exportFailed: 'Export failed',
+        selectSessionFirst: 'Please select a session first',
 
         // Sidebar
         sessions: 'Sessions',

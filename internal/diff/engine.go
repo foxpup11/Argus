@@ -28,6 +28,7 @@ type DiffResult struct {
 	AddedLines int
 	RemovedLines int
 	Patch      string // unified diff 内容
+	Actions    []session.Action // 关联的 Agent 操作
 }
 
 // GetDiff 获取指定范围的 git diff
@@ -168,41 +169,106 @@ func (e *Engine) GetDiffWithActions(actions []session.Action) ([]DiffResult, err
 		diffs[i].Patch = patch
 	}
 
+	// 4. 将 actions 关联到对应的文件 diff
+	if len(actions) > 0 {
+		// 创建文件路径到 actions 的映射
+		actionsByFile := make(map[string][]session.Action)
+		for _, action := range actions {
+			if action.FilePath != "" {
+				actionsByFile[action.FilePath] = append(actionsByFile[action.FilePath], action)
+			}
+		}
+
+		// 关联 actions 到 diff 结果
+		for i := range diffs {
+			if fileActions, ok := actionsByFile[diffs[i].FilePath]; ok {
+				diffs[i].Actions = fileActions
+			}
+		}
+	}
+
 	return diffs, nil
 }
 
 // GetDiffBetweenSession 获取会话前后的 diff
 func (e *Engine) GetDiffBetweenSession(sess *session.Session) ([]DiffResult, error) {
-	// 获取会话开始前的 HEAD
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = e.WorkDir
-	headOutput, err := cmd.Output()
-	if err != nil {
-		// 如果没有 git 仓库，尝试获取未提交的 diff
-		return e.GetUncommittedDiff()
-	}
-	headRef := strings.TrimSpace(string(headOutput))
-
-	// 获取所有 reflog，找到会话开始前的 commit
-	cmd = exec.Command("git", "reflog", "--format=%H %ci")
+	// 1. 首先获取所有 reflog，找到会话开始前的 commit
+	cmd := exec.Command("git", "reflog", "--format=%H %ci")
 	cmd.Dir = e.WorkDir
 	reflogOutput, err := cmd.Output()
 	if err != nil {
+		// 如果无法获取 reflog，尝试获取未提交的 diff
 		return e.GetUncommittedDiff()
 	}
 
 	// 解析 reflog，找到会话开始前的 commit
 	refBeforeSession := findRefBeforeTime(string(reflogOutput), sess.StartedAt.Format(time.RFC3339))
 	if refBeforeSession == "" {
+		// 如果没有找到会话前的 ref，获取未提交的 diff
 		return e.GetUncommittedDiff()
 	}
 
+	// 2. 获取当前 HEAD（在找到会话前的 ref 之后）
+	cmd = exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = e.WorkDir
+	headOutput, err := cmd.Output()
+	if err != nil {
+		// 如果无法获取 HEAD，获取未提交的 diff
+		return e.GetUncommittedDiff()
+	}
+	headRef := strings.TrimSpace(string(headOutput))
+
+	// 3. 对比两个 ref
 	return e.GetDiffBetweenRefs(refBeforeSession, headRef)
 }
 
 func findRefBeforeTime(reflog string, t string) string {
-	// 简化实现：返回第一个 ref
+	// 解析目标时间
+	targetTime, err := time.Parse(time.RFC3339, t)
+	if err != nil {
+		// 如果时间解析失败，返回第一个 ref
+		lines := strings.Split(reflog, "\n")
+		if len(lines) > 0 {
+			parts := strings.SplitN(lines[0], " ", 2)
+			if len(parts) > 0 {
+				return parts[0]
+			}
+		}
+		return ""
+	}
+
 	lines := strings.Split(reflog, "\n")
+	// reflog 是按时间倒序排列的，从最新的到最旧的
+	// 我们需要找到时间在目标时间之前（更旧）的第一个 ref
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := lines[i]
+		if line == "" {
+			continue
+		}
+
+		// 格式: "HASH YYYY-MM-DD HH:MM:SS +TZOFF"
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) < 2 {
+			continue
+		}
+
+		hash := parts[0]
+		timeStr := parts[1]
+
+		// 尝试解析时间
+		// git reflog 时间格式: "2026-06-30 10:30:45 +0800"
+		refTime, err := time.Parse("2006-01-02 15:04:05 -0700", timeStr)
+		if err != nil {
+			continue
+		}
+
+		// 如果这个 ref 的时间在目标时间之前（更旧），返回它
+		if refTime.Before(targetTime) {
+			return hash
+		}
+	}
+
+	// 如果没有找到在目标时间之前的 ref，返回第一个 ref
 	if len(lines) > 0 {
 		parts := strings.SplitN(lines[0], " ", 2)
 		if len(parts) > 0 {

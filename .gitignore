@@ -56,7 +56,7 @@ logs/
 
 # 开发日志（不上传）
 doc/CHANGELOG.md
-
+docs\BUGS.md
 # 文档（保留 docs/images/）
 doc/*
 !doc/images/

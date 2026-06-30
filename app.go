@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"agentscope-desktop/internal/diff"
+	"agentscope-desktop/internal/export"
 	"agentscope-desktop/internal/monitor"
 	"agentscope-desktop/internal/risk"
 	"agentscope-desktop/internal/session"
@@ -36,11 +37,11 @@ type SessionInfo struct {
 
 // FileChangeInfo 文件改动信息（用于表格展示）
 type FileChangeInfo struct {
-	Path       string `json:"path"`
-	ChangeType string `json:"changeType"`
-	Risk       string `json:"risk"`
-	RiskReason string `json:"riskReason"`
-	ActionCount int   `actionCount`
+	Path        string `json:"path"`
+	ChangeType  string `json:"changeType"`
+	Risk        string `json:"risk"`
+	RiskReason  string `json:"riskReason"`
+	ActionCount int    `json:"actionCount"`
 }
 
 // SessionDetail 会话详情
@@ -230,17 +231,21 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 
 	// 风险评估
 	riskEngine := risk.NewEngine()
-	riskEngine.EvaluateAll(fileChanges)
+	fileChanges = riskEngine.EvaluateAll(fileChanges)
 
 	// 转换为前端格式
 	fileChangesInfo := make([]FileChangeInfo, 0, len(fileChanges))
 	for _, fc := range fileChanges {
+		// 计算操作次数
+		actionCount := len(fc.Actions)
+		fc.ActionCount = actionCount
+
 		fileChangesInfo = append(fileChangesInfo, FileChangeInfo{
 			Path:        fc.Path,
 			ChangeType:  string(fc.ChangeType),
 			Risk:        string(fc.Risk),
 			RiskReason:  fc.RiskReason,
-			ActionCount: len(fc.Actions),
+			ActionCount: actionCount,
 		})
 	}
 
@@ -261,13 +266,13 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 
 // GetDiff 获取指定文件的 diff
 func (a *App) GetDiff(sessionID, filePath string) (string, error) {
+	// 检查文件是否存在
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return "", fmt.Errorf("文件不存在: %s (文件可能已被移动或删除)", filepath.Base(filePath))
+	}
+
 	// 如果文件路径是绝对路径，使用文件所在目录查找 Git 仓库
 	if filepath.IsAbs(filePath) {
-		// 检查文件是否存在
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			return "", fmt.Errorf("文件不存在: %s (文件可能已被移动或删除)", filepath.Base(filePath))
-		}
-
 		dir := filepath.Dir(filePath)
 		gitRoot, err := diff.FindGitRoot(dir)
 		if err == nil {
@@ -332,17 +337,13 @@ func (a *App) GetDiff(sessionID, filePath string) (string, error) {
 	}
 
 	diffEngine := diff.NewEngine(gitRoot)
-
-	// 如果是相对路径，直接使用；如果是绝对路径，转换为相对路径
-	targetPath := filePath
-	if filepath.IsAbs(filePath) {
-		relPath, err := filepath.Rel(gitRoot, filePath)
-		if err == nil {
-			targetPath = relPath
-		}
+	// 将文件路径转换为相对于 git 根目录的路径
+	relPath, err := filepath.Rel(gitRoot, filePath)
+	if err != nil {
+		// 如果无法计算相对路径，使用原始路径
+		relPath = filePath
 	}
-
-	patch, err := diffEngine.GetFilePatch(targetPath)
+	patch, err := diffEngine.GetFilePatch(relPath)
 	if err != nil {
 		return "", fmt.Errorf("获取 diff 失败: %w", err)
 	}
@@ -400,4 +401,139 @@ func (a *App) IsMonitoring() bool {
 		return false
 	}
 	return a.monitor.IsRunning()
+}
+
+// SelectDirectory opens a directory selection dialog and returns the selected path.
+func (a *App) SelectDirectory() (string, error) {
+	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "选择导出目录",
+	})
+	if err != nil {
+		return "", fmt.Errorf("打开目录选择对话框失败: %w", err)
+	}
+
+	// 用户取消选择
+	if dir == "" {
+		return "", nil
+	}
+
+	return dir, nil
+}
+
+// ExportResult represents the result of a session export operation.
+type ExportResult struct {
+	FilePath string `json:"filePath"`
+	Format   string `json:"format"`
+	FileSize int64  `json:"fileSize"`
+}
+
+// ExportSession exports the session to an HTML or Markdown file.
+// Returns the file path of the exported report.
+// format: "html" or "markdown"
+// outputDir: optional custom output directory
+func (a *App) ExportSession(sessionID string, format string, outputDir string) (*ExportResult, error) {
+	// Get session data
+	sess, err := a.getSessionByID(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("获取会话失败: %w", err)
+	}
+
+	// Get diff data
+	var diffContent string
+	workDir := sess.CWD
+	if workDir == "" {
+		workDir, _ = os.Getwd()
+	}
+
+	gitRoot, err := diff.FindGitRoot(workDir)
+	if err == nil {
+		diffEngine := diff.NewEngine(gitRoot)
+		diffs, err := diffEngine.GetUncommittedDiff()
+		if err == nil && len(diffs) > 0 {
+			// Combine all diffs
+			var diffParts []string
+			for _, d := range diffs {
+				if d.Patch != "" {
+					diffParts = append(diffParts, d.Patch)
+				}
+			}
+			diffContent = joinStrings(diffParts, "\n\n")
+		}
+	}
+
+	// Determine export format
+	var exportFormat export.ExportFormat
+	switch format {
+	case "markdown", "md":
+		exportFormat = export.FormatMarkdown
+	case "html":
+		exportFormat = export.FormatHTML
+	default:
+		exportFormat = export.FormatHTML
+	}
+
+	// Export session with optional custom path
+	result, err := export.ExportSession(sess, diffContent, export.ExportOptions{
+		Format:    exportFormat,
+		SessionID: sessionID,
+		OutputDir: outputDir,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("导出会话失败: %w", err)
+	}
+
+	return &ExportResult{
+		FilePath: result.FilePath,
+		Format:   string(result.Format),
+		FileSize: result.FileSize,
+	}, nil
+}
+
+// getSessionByID retrieves session data by ID.
+func (a *App) getSessionByID(id string) (*session.Session, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("获取用户目录失败: %w", err)
+	}
+
+	claudeDir := filepath.Join(homeDir, ".claude", "projects")
+
+	// 遍历所有项目目录，查找匹配的会话 ID
+	entries, _ := os.ReadDir(claudeDir)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		projectDir := filepath.Join(claudeDir, entry.Name())
+		jsonlFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		for _, jsonlPath := range jsonlFiles {
+			reader := claude.NewReader()
+			sess, err := reader.Read(jsonlPath)
+			if err != nil {
+				continue
+			}
+			// 检查会话 ID 是否匹配
+			if sess.ID == id {
+				return sess, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("未找到会话: %s", id)
+}
+
+// joinStrings joins a slice of strings with a separator.
+func joinStrings(strs []string, sep string) string {
+	if len(strs) == 0 {
+		return ""
+	}
+	if len(strs) == 1 {
+		return strs[0]
+	}
+
+	result := strs[0]
+	for _, s := range strs[1:] {
+		result += sep + s
+	}
+	return result
 }
