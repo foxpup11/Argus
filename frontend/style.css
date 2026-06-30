@@ -124,6 +124,12 @@ body {
     transform: scale(0.98);
 }
 
+.btn-lang {
+    font-weight: 600;
+    min-width: 36px;
+    justify-content: center;
+}
+
 /* ============================================
    Main Layout
    ============================================ */
@@ -215,10 +221,14 @@ body {
 
 .session-item.active {
     background: var(--gray-100);
-    border-color: var(--gray-200);
+    border-color: var(--gray-300);
+    border-left: 3px solid var(--accent);
 }
 
-.session-item.active .session-id {
+.session-item.active .session-id,
+.session-item.active .session-model,
+.session-item.active .session-prompt,
+.session-item.active .session-meta {
     color: var(--text-primary);
 }
 

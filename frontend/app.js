@@ -2,51 +2,85 @@
 
 // 全局状态
 let currentSessionId = null;
-let currentFileIndex = 0;
+let sessions = [];
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     loadSessions();
     setupEventListeners();
+    initI18n();
 });
+
+// 初始化国际化
+function initI18n() {
+    document.getElementById('langSwitchBtn').textContent = t('langSwitch');
+    updateUI();
+}
+
+// 更新所有 UI 文本
+function updateUI() {
+    // 更新语言切换按钮
+    document.getElementById('langSwitchBtn').textContent = t('langSwitch');
+
+    // 更新 data-i18n 元素
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (key) {
+            el.textContent = t(key);
+        }
+    });
+
+    // 更新 placeholder
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (key) {
+            el.placeholder = t(key);
+        }
+    });
+
+    // 重新渲染会话列表
+    if (sessions.length > 0) {
+        renderSessionList(sessions);
+    }
+}
 
 // 加载会话列表
 async function loadSessions() {
     const sessionList = document.getElementById('sessionList');
-    sessionList.innerHTML = '<div class="loading">加载中...</div>';
+    sessionList.innerHTML = `<div class="loading">${t('loading')}</div>`;
 
     try {
-        const sessions = await window.go.main.App.GetSessions();
+        sessions = await window.go.main.App.GetSessions();
         renderSessionList(sessions);
     } catch (error) {
-        sessionList.innerHTML = `<div class="loading">加载失败: ${error}</div>`;
+        sessionList.innerHTML = `<div class="loading">${t('loadFailed')}: ${error}</div>`;
     }
 }
 
 // 渲染会话列表
-function renderSessionList(sessions) {
+function renderSessionList(sessionData) {
     const sessionList = document.getElementById('sessionList');
 
-    if (!sessions || sessions.length === 0) {
+    if (!sessionData || sessionData.length === 0) {
         sessionList.innerHTML = `
             <div class="empty-state">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                <p>暂无会话数据</p>
+                <p>${t('noSessions')}</p>
             </div>
         `;
         return;
     }
 
-    sessionList.innerHTML = sessions.map(session => `
+    sessionList.innerHTML = sessionData.map(session => `
         <div class="session-item" data-id="${session.id}">
             <div class="session-id">${session.id.substring(0, 8)}</div>
             <div class="session-model">${session.model || '-'}</div>
             <div class="session-prompt">${session.prompt || '-'}</div>
             <div class="session-meta">
-                <span>文件 ${session.fileCount}</span>
-                <span>操作 ${session.actionCount}</span>
+                <span>${t('files')} ${session.fileCount}</span>
+                <span>${t('actions')} ${session.actionCount}</span>
             </div>
         </div>
     `).join('');
@@ -80,9 +114,9 @@ async function selectSession(sessionId) {
 // 渲染会话详情
 function renderSessionDetail(detail) {
     // 更新状态栏
-    document.getElementById('statusSession').textContent = `会话: ${detail.id.substring(0, 8)}`;
-    document.getElementById('statusBranch').textContent = `分支: ${detail.branch || '-'}`;
-    document.getElementById('statusTokens').textContent = `Token: ${formatNumber(detail.tokenUsage.inputTokens)} in / ${formatNumber(detail.tokenUsage.outputTokens)} out`;
+    document.getElementById('statusSession').innerHTML = `${t('session')}: ${detail.id.substring(0, 8)}`;
+    document.getElementById('statusBranch').innerHTML = `${t('branch')}: ${detail.branch || '-'}`;
+    document.getElementById('statusTokens').innerHTML = `Token: ${formatNumber(detail.tokenUsage.inputTokens)} ${t('tokenIn')} / ${formatNumber(detail.tokenUsage.outputTokens)} ${t('tokenOut')}`;
 
     // 更新文件表格
     const fileTableBody = document.getElementById('fileTableBody');
@@ -95,21 +129,21 @@ function renderSessionDetail(detail) {
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
-                    <p>暂无文件改动</p>
+                    <p>${t('noChanges')}</p>
                 </td>
             </tr>
         `;
-        fileCount.textContent = '0 个文件';
+        fileCount.textContent = '0';
         return;
     }
 
-    fileCount.textContent = `${detail.fileChanges.length} 个文件`;
+    fileCount.textContent = detail.fileChanges.length;
 
     fileTableBody.innerHTML = detail.fileChanges.map((file, index) => `
         <tr data-index="${index}" data-path="${file.path}">
-            <td><span class="risk-badge risk-${(file.risk || 'review').toLowerCase()}">${getRiskLabel(file.risk)}</span></td>
+            <td><span class="risk-badge risk-${(file.risk || 'review').toLowerCase()}">${t((file.risk || 'review').toLowerCase())}</span></td>
             <td title="${file.path}">${truncatePath(file.path)}</td>
-            <td><span class="change-badge change-${(file.changeType || 'modified').toLowerCase()}">${getChangeTypeLabel(file.changeType)}</span></td>
+            <td><span class="change-badge change-${(file.changeType || 'modified').toLowerCase()}">${t((file.changeType || 'modified').toLowerCase())}</span></td>
             <td>${file.actionCount || 0}</td>
         </tr>
     `).join('');
@@ -141,7 +175,7 @@ async function selectFile(filePath) {
         const diff = await window.go.main.App.GetDiff(currentSessionId, filePath);
         renderDiff(diff, filePath);
     } catch (error) {
-        document.getElementById('diffView').innerHTML = `<code>加载 diff 失败: ${error}</code>`;
+        document.getElementById('diffView').innerHTML = `<code>${t('loadFailed')}: ${error}</code>`;
     }
 }
 
@@ -150,7 +184,7 @@ function renderDiff(diff, filePath) {
     const diffView = document.getElementById('diffView');
 
     if (!diff) {
-        diffView.innerHTML = '<code>暂无 diff 数据</code>';
+        diffView.innerHTML = `<code>${t('noDiff')}</code>`;
         return;
     }
 
@@ -180,26 +214,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// 获取风险标签
-function getRiskLabel(risk) {
-    switch (risk) {
-        case 'Safe': return 'Safe';
-        case 'Review': return 'Review';
-        case 'Danger': return 'Danger';
-        default: return risk;
-    }
-}
-
-// 获取变更类型标签
-function getChangeTypeLabel(changeType) {
-    switch (changeType) {
-        case 'Created': return '新增';
-        case 'Modified': return '修改';
-        case 'Deleted': return '删除';
-        default: return changeType;
-    }
-}
-
 // 截断路径
 function truncatePath(path) {
     if (path.length > 40) {
@@ -223,6 +237,11 @@ function formatNumber(num) {
 function setupEventListeners() {
     // 刷新按钮
     document.getElementById('refreshBtn').addEventListener('click', loadSessions);
+
+    // 语言切换按钮
+    document.getElementById('langSwitchBtn').addEventListener('click', () => {
+        switchLang();
+    });
 
     // 搜索框
     document.getElementById('searchInput').addEventListener('input', (e) => {

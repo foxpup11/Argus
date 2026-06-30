@@ -11,15 +11,16 @@
         <!-- Header -->
         <header class="header">
             <div class="title-section">
-                <h1 class="title">AgentScope</h1>
+                <h1 class="title" data-i18n="appTitle">AgentScope</h1>
             </div>
             <div class="header-actions">
+                <button id="langSwitchBtn" class="btn btn-lang">EN</button>
                 <button id="refreshBtn" class="btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M23 4v6h-6M1 20v-6h6"/>
                         <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
                     </svg>
-                    刷新
+                    <span data-i18n="refresh">刷新</span>
                 </button>
             </div>
         </header>
@@ -29,17 +30,17 @@
             <!-- Sidebar -->
             <aside class="sidebar">
                 <div class="sidebar-header">
-                    <h2>会话</h2>
+                    <h2 data-i18n="sessions">会话</h2>
                     <div class="search-wrapper">
                         <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8"/>
                             <path d="M21 21l-4.35-4.35"/>
                         </svg>
-                        <input type="text" id="searchInput" placeholder="搜索..." class="search-input">
+                        <input type="text" id="searchInput" data-i18n-placeholder="searchPlaceholder" placeholder="搜索..." class="search-input">
                     </div>
                 </div>
                 <div id="sessionList" class="session-list">
-                    <div class="loading">加载中...</div>
+                    <div class="loading" data-i18n="loading">加载中...</div>
                 </div>
             </aside>
 
@@ -48,16 +49,16 @@
                 <!-- File Table -->
                 <div class="file-table-container">
                     <div class="table-header">
-                        <h3>文件改动</h3>
+                        <h3 data-i18n="fileChanges">文件改动</h3>
                         <span id="fileCount" class="badge">0</span>
                     </div>
                     <table id="fileTable" class="file-table">
                         <thead>
                             <tr>
-                                <th style="width: 100px">Risk</th>
-                                <th>File</th>
-                                <th style="width: 100px">Change</th>
-                                <th style="width: 60px">Ops</th>
+                                <th style="width: 100px" data-i18n="risk">RISK</th>
+                                <th data-i18n="file">FILE</th>
+                                <th style="width: 100px" data-i18n="change">CHANGE</th>
+                                <th style="width: 60px" data-i18n="ops">OPS</th>
                             </tr>
                         </thead>
                         <tbody id="fileTableBody">
@@ -66,7 +67,7 @@
                                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                         <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
-                                    <p>选择会话查看改动</p>
+                                    <p data-i18n="selectSession">选择会话查看改动</p>
                                 </td>
                             </tr>
                         </tbody>
@@ -76,22 +77,23 @@
                 <!-- Diff View -->
                 <div class="diff-container">
                     <div class="diff-header">
-                        <h3>Diff</h3>
+                        <h3 data-i18n="diff">Diff</h3>
                         <span id="diffFileName" class="diff-filename"></span>
                     </div>
-                    <pre id="diffView" class="diff-view"><code>选择文件查看差异</code></pre>
+                    <pre id="diffView" class="diff-view"><code data-i18n="selectFile">选择文件查看差异</code></pre>
                 </div>
             </section>
         </main>
 
         <!-- Status Bar -->
         <footer class="status-bar">
-            <span id="statusSession">会话: -</span>
-            <span id="statusBranch">分支: -</span>
-            <span id="statusTokens">Token: - in / - out</span>
+            <span id="statusSession"><span data-i18n="session">会话</span>: -</span>
+            <span id="statusBranch"><span data-i18n="branch">分支</span>: -</span>
+            <span id="statusTokens">Token: - <span data-i18n="tokenIn">in</span> / - <span data-i18n="tokenOut">out</span></span>
         </footer>
     </div>
 
+    <script src="./i18n.js"></script>
     <script src="./app.js"></script>
 </body>
 </html>
