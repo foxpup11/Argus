@@ -61,10 +61,6 @@ agentscope.exe
 
 **就这么简单。**
 
-## 📸 界面预览
-
-![image-20260630110835712](C:\Users\20807\AppData\Roaming\Typora\typora-user-images\image-20260630110835712.png)
-
 ## 🛡️ 风险评估
 
 AgentScope 自动评估每个改动的风险等级：
