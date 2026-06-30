@@ -260,6 +260,14 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 	// 转换为切片
 	fileChanges := make([]session.FileChange, 0, len(fileChangesMap))
 	for _, fc := range fileChangesMap {
+		// 检查文件是否实际存在，如果不存在则标记为删除
+		fullPath := fc.Path
+		if !filepath.IsAbs(fullPath) {
+			fullPath = filepath.Join(workDir, fc.Path)
+		}
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			fc.ChangeType = session.ChangeDeleted
+		}
 		fileChanges = append(fileChanges, *fc)
 	}
 
