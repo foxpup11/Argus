@@ -267,10 +267,6 @@ body {
     overflow: hidden;
 }
 
-.session-item.active .session-prompt {
-    color: rgba(255, 255, 255, 0.8);
-}
-
 .session-item .session-meta {
     display: flex;
     gap: 16px;
@@ -279,11 +275,6 @@ body {
     border-top: 1px solid var(--border);
     font-size: 12px;
     color: var(--text-tertiary);
-}
-
-.session-item.active .session-meta {
-    border-top-color: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.6);
 }
 
 /* ============================================
