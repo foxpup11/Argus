@@ -3,69 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentScope Desktop</title>
+    <title>AgentScope</title>
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
     <div id="app">
-        <!-- 标题栏 -->
+        <!-- Header -->
         <header class="header">
-            <h1 class="title">AgentScope Desktop</h1>
+            <div class="title-section">
+                <h1 class="title">AgentScope</h1>
+            </div>
             <div class="header-actions">
-                <button id="refreshBtn" class="btn btn-secondary">刷新</button>
+                <button id="refreshBtn" class="btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6"/>
+                        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                    </svg>
+                    刷新
+                </button>
             </div>
         </header>
 
-        <!-- 主内容区 -->
+        <!-- Main -->
         <main class="main">
-            <!-- 左侧：会话列表 -->
+            <!-- Sidebar -->
             <aside class="sidebar">
                 <div class="sidebar-header">
-                    <h2>会话列表</h2>
-                    <input type="text" id="searchInput" placeholder="搜索会话..." class="search-input">
+                    <h2>会话</h2>
+                    <div class="search-wrapper">
+                        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="M21 21l-4.35-4.35"/>
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="搜索..." class="search-input">
+                    </div>
                 </div>
                 <div id="sessionList" class="session-list">
                     <div class="loading">加载中...</div>
                 </div>
             </aside>
 
-            <!-- 右侧：详情区 -->
+            <!-- Content -->
             <section class="content">
-                <!-- 文件表格 -->
+                <!-- File Table -->
                 <div class="file-table-container">
                     <div class="table-header">
                         <h3>文件改动</h3>
-                        <span id="fileCount" class="badge">0 个文件</span>
+                        <span id="fileCount" class="badge">0</span>
                     </div>
                     <table id="fileTable" class="file-table">
                         <thead>
                             <tr>
-                                <th>Risk</th>
+                                <th style="width: 100px">Risk</th>
                                 <th>File</th>
-                                <th>Change</th>
-                                <th>Ops</th>
+                                <th style="width: 100px">Change</th>
+                                <th style="width: 60px">Ops</th>
                             </tr>
                         </thead>
                         <tbody id="fileTableBody">
                             <tr>
-                                <td colspan="4" class="empty-state">选择一个会话查看文件改动</td>
+                                <td colspan="4" class="empty-state">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    <p>选择会话查看改动</p>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Diff 视图 -->
+                <!-- Diff View -->
                 <div class="diff-container">
                     <div class="diff-header">
-                        <h3>Diff 视图</h3>
+                        <h3>Diff</h3>
                         <span id="diffFileName" class="diff-filename"></span>
                     </div>
-                    <pre id="diffView" class="diff-view"><code>选择一个文件查看 diff</code></pre>
+                    <pre id="diffView" class="diff-view"><code>选择文件查看差异</code></pre>
                 </div>
             </section>
         </main>
 
-        <!-- 状态栏 -->
+        <!-- Status Bar -->
         <footer class="status-bar">
             <span id="statusSession">会话: -</span>
             <span id="statusBranch">分支: -</span>

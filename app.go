@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"agentscope-desktop/internal/diff"
 	"agentscope-desktop/internal/risk"
+	"agentscope-desktop/internal/session"
 	"agentscope-desktop/internal/session/claude"
 )
 
@@ -112,6 +114,11 @@ func (a *App) GetSessions() ([]SessionInfo, error) {
 		}
 	}
 
+	// 按时间倒序排列（最新的在前）
+	sort.Slice(sessions, func(i, j int) bool {
+		return sessions[i].StartedAt.After(sessions[j].StartedAt)
+	})
+
 	return sessions, nil
 }
 
@@ -155,7 +162,34 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 		return nil, fmt.Errorf("读取会话失败: %w", err)
 	}
 
-	// 获取 Git Diff
+	// 从 actions 中提取文件改动
+	fileChangesMap := make(map[string]*session.FileChange)
+	for _, action := range sess.Actions {
+		if action.FilePath == "" {
+			continue
+		}
+
+		fc, exists := fileChangesMap[action.FilePath]
+		if !exists {
+			// 确定变更类型
+			changeType := session.ChangeModified
+			// 简单判断：如果 action 是 Write 且是第一个，可能是新建
+			if action.Type == session.ActionWrite {
+				changeType = session.ChangeCreated
+			}
+
+			fc = &session.FileChange{
+				Path:       action.FilePath,
+				ChangeType: changeType,
+				Actions:    []session.Action{action},
+			}
+			fileChangesMap[action.FilePath] = fc
+		} else {
+			fc.Actions = append(fc.Actions, action)
+		}
+	}
+
+	// 尝试获取 Git Diff（如果会话目录存在）
 	workDir := sess.CWD
 	if workDir == "" {
 		workDir, _ = os.Getwd()
@@ -166,22 +200,38 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 		diffEngine := diff.NewEngine(gitRoot)
 		diffs, err := diffEngine.GetUncommittedDiff()
 		if err == nil {
-			// 匹配 diff 和 actions
-			matcher := diff.NewMatcher()
-			fileChanges := matcher.MatchWithGitDiff(sess, diffs)
-
-			// 风险评估
-			riskEngine := risk.NewEngine()
-			riskEngine.EvaluateAll(fileChanges)
-
-			sess.FileChanges = fileChanges
+			// 将 git diff 合并到 fileChangesMap
+			for _, d := range diffs {
+				fc, exists := fileChangesMap[d.FilePath]
+				if exists {
+					fc.Diff = d.Patch
+					fc.ChangeType = d.ChangeType
+				} else {
+					fileChangesMap[d.FilePath] = &session.FileChange{
+						Path:       d.FilePath,
+						ChangeType: d.ChangeType,
+						Diff:       d.Patch,
+						Actions:    []session.Action{},
+					}
+				}
+			}
 		}
 	}
 
+	// 转换为切片
+	fileChanges := make([]session.FileChange, 0, len(fileChangesMap))
+	for _, fc := range fileChangesMap {
+		fileChanges = append(fileChanges, *fc)
+	}
+
+	// 风险评估
+	riskEngine := risk.NewEngine()
+	riskEngine.EvaluateAll(fileChanges)
+
 	// 转换为前端格式
-	fileChanges := make([]FileChangeInfo, 0, len(sess.FileChanges))
-	for _, fc := range sess.FileChanges {
-		fileChanges = append(fileChanges, FileChangeInfo{
+	fileChangesInfo := make([]FileChangeInfo, 0, len(fileChanges))
+	for _, fc := range fileChanges {
+		fileChangesInfo = append(fileChangesInfo, FileChangeInfo{
 			Path:        fc.Path,
 			ChangeType:  string(fc.ChangeType),
 			Risk:        string(fc.Risk),
@@ -197,7 +247,7 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 		Branch:      sess.GitBranch,
 		StartedAt:   sess.StartedAt,
 		Duration:    sess.Duration,
-		FileChanges: fileChanges,
+		FileChanges: fileChangesInfo,
 		TokenUsage: TokenUsageInfo{
 			InputTokens:  sess.TokenUsage.InputTokens,
 			OutputTokens: sess.TokenUsage.OutputTokens,

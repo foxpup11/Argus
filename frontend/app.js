@@ -28,18 +28,25 @@ function renderSessionList(sessions) {
     const sessionList = document.getElementById('sessionList');
 
     if (!sessions || sessions.length === 0) {
-        sessionList.innerHTML = '<div class="loading">暂无会话数据</div>';
+        sessionList.innerHTML = `
+            <div class="empty-state">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p>暂无会话数据</p>
+            </div>
+        `;
         return;
     }
 
     sessionList.innerHTML = sessions.map(session => `
         <div class="session-item" data-id="${session.id}">
             <div class="session-id">${session.id.substring(0, 8)}</div>
-            <div class="session-model">${session.model || '未知模型'}</div>
-            <div class="session-prompt">${session.prompt || '无提示词'}</div>
+            <div class="session-model">${session.model || '-'}</div>
+            <div class="session-prompt">${session.prompt || '-'}</div>
             <div class="session-meta">
-                <span>文件: ${session.fileCount}</span>
-                <span>操作: ${session.actionCount}</span>
+                <span>文件 ${session.fileCount}</span>
+                <span>操作 ${session.actionCount}</span>
             </div>
         </div>
     `).join('');
@@ -75,14 +82,23 @@ function renderSessionDetail(detail) {
     // 更新状态栏
     document.getElementById('statusSession').textContent = `会话: ${detail.id.substring(0, 8)}`;
     document.getElementById('statusBranch').textContent = `分支: ${detail.branch || '-'}`;
-    document.getElementById('statusTokens').textContent = `Token: ${detail.tokenUsage.inputTokens} in / ${detail.tokenUsage.outputTokens} out`;
+    document.getElementById('statusTokens').textContent = `Token: ${formatNumber(detail.tokenUsage.inputTokens)} in / ${formatNumber(detail.tokenUsage.outputTokens)} out`;
 
     // 更新文件表格
     const fileTableBody = document.getElementById('fileTableBody');
     const fileCount = document.getElementById('fileCount');
 
     if (!detail.fileChanges || detail.fileChanges.length === 0) {
-        fileTableBody.innerHTML = '<tr><td colspan="4" class="empty-state">暂无文件改动</td></tr>';
+        fileTableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <p>暂无文件改动</p>
+                </td>
+            </tr>
+        `;
         fileCount.textContent = '0 个文件';
         return;
     }
@@ -91,10 +107,10 @@ function renderSessionDetail(detail) {
 
     fileTableBody.innerHTML = detail.fileChanges.map((file, index) => `
         <tr data-index="${index}" data-path="${file.path}">
-            <td><span class="risk-badge risk-${file.risk.toLowerCase()}">${getRiskLabel(file.risk)}</span></td>
+            <td><span class="risk-badge risk-${(file.risk || 'review').toLowerCase()}">${getRiskLabel(file.risk)}</span></td>
             <td title="${file.path}">${truncatePath(file.path)}</td>
-            <td><span class="change-badge change-${file.changeType.toLowerCase()}">${file.changeType}</span></td>
-            <td>${file.actionCount}</td>
+            <td><span class="change-badge change-${(file.changeType || 'modified').toLowerCase()}">${getChangeTypeLabel(file.changeType)}</span></td>
+            <td>${file.actionCount || 0}</td>
         </tr>
     `).join('');
 
@@ -174,12 +190,33 @@ function getRiskLabel(risk) {
     }
 }
 
+// 获取变更类型标签
+function getChangeTypeLabel(changeType) {
+    switch (changeType) {
+        case 'Created': return '新增';
+        case 'Modified': return '修改';
+        case 'Deleted': return '删除';
+        default: return changeType;
+    }
+}
+
 // 截断路径
 function truncatePath(path) {
     if (path.length > 40) {
         return '...' + path.slice(-37);
     }
     return path;
+}
+
+// 格式化数字
+function formatNumber(num) {
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+    }
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
 }
 
 // 设置事件监听
