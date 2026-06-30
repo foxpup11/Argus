@@ -15,14 +15,16 @@ import (
 	"agentscope-desktop/internal/risk"
 	"agentscope-desktop/internal/session"
 	"agentscope-desktop/internal/session/claude"
+	"agentscope-desktop/internal/settings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx     context.Context
-	monitor *monitor.Monitor
+	ctx          context.Context
+	monitor      *monitor.Monitor
+	settingsMgr  *settings.Manager
 }
 
 // SessionInfo 会话简要信息（用于列表展示）
@@ -96,6 +98,12 @@ func NewApp() *App {
 // startup is called when the app starts
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	// 初始化设置管理器
+	mgr, err := settings.NewManager()
+	if err == nil {
+		a.settingsMgr = mgr
+	}
 }
 
 // GetSessions 获取所有会话列表
@@ -440,6 +448,92 @@ func (a *App) GetSessionDiff(sessionID string, mode DiffMode) (*DiffInfo, error)
 		Mode:  mode,
 		Diffs: diffInfos,
 	}, nil
+}
+
+// SettingsInfo 设置信息
+type SettingsInfo struct {
+	Theme       string             `json:"theme"`
+	CustomRules []CustomRuleInfo   `json:"customRules"`
+}
+
+// CustomRuleInfo 自定义规则信息
+type CustomRuleInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Level       string `json:"level"`
+	Pattern     string `json:"pattern"`
+	Enabled     bool   `json:"enabled"`
+}
+
+// GetSettings 获取应用设置
+func (a *App) GetSettings() (*SettingsInfo, error) {
+	if a.settingsMgr == nil {
+		return &SettingsInfo{
+			Theme:       "auto",
+			CustomRules: []CustomRuleInfo{},
+		}, nil
+	}
+
+	s := a.settingsMgr.Get()
+	rules := make([]CustomRuleInfo, len(s.CustomRules))
+	for i, r := range s.CustomRules {
+		rules[i] = CustomRuleInfo{
+			Name:        r.Name,
+			Description: r.Description,
+			Level:       string(r.Level),
+			Pattern:     r.Pattern,
+			Enabled:     r.Enabled,
+		}
+	}
+
+	return &SettingsInfo{
+		Theme:       string(s.Theme),
+		CustomRules: rules,
+	}, nil
+}
+
+// UpdateTheme 更新主题设置
+func (a *App) UpdateTheme(theme string) error {
+	if a.settingsMgr == nil {
+		return fmt.Errorf("设置管理器未初始化")
+	}
+	return a.settingsMgr.UpdateTheme(settings.Theme(theme))
+}
+
+// AddCustomRule 添加自定义规则
+func (a *App) AddCustomRule(name, description, level, pattern string) error {
+	if a.settingsMgr == nil {
+		return fmt.Errorf("设置管理器未初始化")
+	}
+	return a.settingsMgr.AddCustomRule(settings.CustomRule{
+		Name:        name,
+		Description: description,
+		Level:       session.RiskLevel(level),
+		Pattern:     pattern,
+		Enabled:     true,
+	})
+}
+
+// RemoveCustomRule 删除自定义规则
+func (a *App) RemoveCustomRule(name string) error {
+	if a.settingsMgr == nil {
+		return fmt.Errorf("设置管理器未初始化")
+	}
+	return a.settingsMgr.RemoveCustomRule(name)
+}
+
+// UpdateCustomRule 更新自定义规则
+func (a *App) UpdateCustomRule(name, description, level, pattern string, enabled bool) error {
+	if a.settingsMgr == nil {
+		return fmt.Errorf("设置管理器未初始化")
+	}
+	return a.settingsMgr.UpdateCustomRule(name, settings.CustomRule{
+		Name:        name,
+		Description: description,
+		Level:       session.RiskLevel(level),
+		Pattern:     pattern,
+		Enabled:     enabled,
+	})
 }
 
 // StartMonitoring starts watching the Claude sessions directory for changes.

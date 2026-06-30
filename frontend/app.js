@@ -447,3 +447,156 @@ function switchDiffMode(mode) {
         selectFile(diffFileName.textContent);
     }
 }
+
+// ============================================
+// Settings Panel
+// ============================================
+
+let currentSettings = null;
+
+// 打开设置面板
+async function openSettings() {
+    const modal = document.getElementById('settingsModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+
+    // 加载设置
+    try {
+        currentSettings = await window.go.main.App.GetSettings();
+        renderSettings();
+    } catch (error) {
+        console.error('加载设置失败:', error);
+    }
+}
+
+// 关闭设置面板
+function closeSettings() {
+    const modal = document.getElementById('settingsModal');
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 200);
+}
+
+// 渲染设置
+function renderSettings() {
+    if (!currentSettings) return;
+
+    // 更新主题按钮状态
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-theme') === currentSettings.theme);
+    });
+
+    // 渲染自定义规则
+    renderCustomRules();
+}
+
+// 设置主题
+async function setTheme(theme) {
+    try {
+        await window.go.main.App.UpdateTheme(theme);
+        currentSettings.theme = theme;
+
+        // 更新按钮状态
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
+        });
+
+        // 应用主题
+        applyTheme(theme);
+        showToast(t('theme') + ': ' + t('theme' + theme.charAt(0).toUpperCase() + theme.slice(1)));
+    } catch (error) {
+        console.error('设置主题失败:', error);
+    }
+}
+
+// 应用主题
+function applyTheme(theme) {
+    if (theme === 'auto') {
+        // 跟随系统
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    } else {
+        document.documentElement.setAttribute('data-theme', theme);
+    }
+}
+
+// 渲染自定义规则
+function renderCustomRules() {
+    const container = document.getElementById('customRulesList');
+    if (!container || !currentSettings) return;
+
+    if (currentSettings.customRules.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-tertiary); font-size: 13px;">${t('noRules') || '暂无自定义规则'}</p>`;
+        return;
+    }
+
+    container.innerHTML = currentSettings.customRules.map(rule => `
+        <div class="rule-item">
+            <div class="rule-info">
+                <div class="rule-name">${escapeHtml(rule.name)}</div>
+                <div class="rule-desc">${escapeHtml(rule.description)}</div>
+            </div>
+            <span class="rule-level ${rule.level.toLowerCase()}">${rule.level}</span>
+            <button class="rule-delete" onclick="deleteRule('${escapeHtmlAttr(rule.name)}')" title="${t('deleteRule')}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+    `).join('');
+}
+
+// 显示添加规则表单（简化版：使用 prompt）
+function showAddRuleForm() {
+    const name = prompt(t('ruleNamePlaceholder') || '规则名称:');
+    if (!name) return;
+
+    const description = prompt(t('ruleDescPlaceholder') || '规则描述:');
+    if (!description) return;
+
+    const level = prompt(t('ruleLevelPlaceholder') || '风险等级 (safe/review/danger):', 'review');
+    if (!level || !['safe', 'review', 'danger'].includes(level.toLowerCase())) {
+        showToast(t('invalidLevel') || '无效的风险等级');
+        return;
+    }
+
+    const pattern = prompt(t('rulePatternPlaceholder') || '文件路径匹配模式:');
+    if (!pattern) return;
+
+    addRule(name, description, level.toLowerCase(), pattern);
+}
+
+// 添加规则
+async function addRule(name, description, level, pattern) {
+    try {
+        await window.go.main.App.AddCustomRule(name, description, level, pattern);
+        currentSettings.customRules.push({ name, description, level, pattern, enabled: true });
+        renderCustomRules();
+        showToast(t('ruleAdded') || '规则已添加');
+    } catch (error) {
+        console.error('添加规则失败:', error);
+    }
+}
+
+// 删除规则
+async function deleteRule(name) {
+    if (!confirm(t('confirmDelete') || '确定要删除这个规则吗？')) {
+        return;
+    }
+
+    try {
+        await window.go.main.App.RemoveCustomRule(name);
+        currentSettings.customRules = currentSettings.customRules.filter(r => r.name !== name);
+        renderCustomRules();
+        showToast(t('ruleDeleted') || '规则已删除');
+    } catch (error) {
+        console.error('删除规则失败:', error);
+    }
+}
+
+// 点击模态框背景关闭
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'settingsModal') {
+        closeSettings();
+    }
+});

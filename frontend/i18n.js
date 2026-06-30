@@ -66,6 +66,16 @@ const i18n = {
 
         // 语言切换
         langSwitch: 'EN',
+
+        // 设置面板
+        settings: '设置',
+        theme: '主题',
+        themeLight: '浅色',
+        themeDark: '深色',
+        themeAuto: '跟随系统',
+        customRules: '自定义风险规则',
+        addRule: '添加规则',
+        deleteRule: '删除',
     },
     en: {
         // Header
@@ -133,6 +143,16 @@ const i18n = {
 
         // Language Switch
         langSwitch: '中文',
+
+        // Settings Panel
+        settings: 'Settings',
+        theme: 'Theme',
+        themeLight: 'Light',
+        themeDark: 'Dark',
+        themeAuto: 'System',
+        customRules: 'Custom Risk Rules',
+        addRule: 'Add Rule',
+        deleteRule: 'Delete',
     }
 };
 
