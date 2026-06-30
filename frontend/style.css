@@ -113,6 +113,52 @@ body {
     transform: scale(0.97);
 }
 
+/* Monitor Button */
+.monitor-btn {
+    position: relative;
+}
+
+.monitor-btn.active {
+    background: rgba(25, 135, 84, 0.1);
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.monitor-btn.active::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+/* Toast Notification */
+.toast {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
 /* Language Toggle - iOS Style */
 .lang-toggle {
     position: relative;
@@ -366,6 +412,8 @@ body {
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-sm);
+    min-height: 0;
+    max-height: 50%;
 }
 
 .table-header {
@@ -393,8 +441,14 @@ body {
 }
 
 .file-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.file-table-wrapper {
     flex: 1;
     overflow-y: auto;
+    min-height: 0;
 }
 
 .file-table th {
@@ -409,6 +463,7 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid var(--border);
+    z-index: 10;
 }
 
 .file-table td {
@@ -416,6 +471,9 @@ body {
     font-size: 13px;
     color: var(--text-primary);
     border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .file-table tr:last-child td {

@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSessions();
     setupEventListeners();
     initI18n();
+    initMonitoring();
 
     // 每 2 分钟后台静默刷新会话列表
     setInterval(silentRefreshSessions, 120000);
@@ -32,6 +33,74 @@ async function silentRefreshSessions() {
 function initI18n() {
     updateLangToggle();
     updateUI();
+}
+
+// 监控状态
+let isMonitoring = false;
+
+// 初始化监控
+async function initMonitoring() {
+    // 检查监控状态
+    try {
+        isMonitoring = await window.go.main.App.IsMonitoring();
+        updateMonitoringUI();
+    } catch (error) {
+        console.error('检查监控状态失败:', error);
+    }
+
+    // 监听会话更新事件
+    window.runtime.EventsOn('session-updated', () => {
+        silentRefreshSessions();
+        showToast(t('sessionUpdated'));
+    });
+}
+
+// 切换监控状态
+async function toggleMonitoring() {
+    try {
+        if (isMonitoring) {
+            await window.go.main.App.StopMonitoring();
+            isMonitoring = false;
+            showToast(t('monitoringStopped'));
+        } else {
+            const started = await window.go.main.App.StartMonitoring();
+            if (started) {
+                isMonitoring = true;
+                showToast(t('monitoringStarted'));
+            }
+        }
+        updateMonitoringUI();
+    } catch (error) {
+        console.error('切换监控状态失败:', error);
+        showToast(t('monitoringFailed'));
+    }
+}
+
+// 更新监控 UI
+function updateMonitoringUI() {
+    const indicator = document.getElementById('monitorIndicator');
+    if (indicator) {
+        indicator.classList.toggle('active', isMonitoring);
+        indicator.title = isMonitoring ? t('monitoringActive') : t('monitoringInactive');
+    }
+}
+
+// 显示提示消息
+function showToast(message) {
+    // 创建 toast 元素
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    // 显示动画
+    setTimeout(() => toast.classList.add('show'), 10);
+
+    // 3秒后移除
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 // 更新语言切换按钮

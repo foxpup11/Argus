@@ -4,6 +4,15 @@ const i18n = {
         // 标题栏
         appTitle: 'AgentScope',
         refresh: '刷新',
+        monitor: '监控',
+
+        // 监控状态
+        monitoringActive: '实时监控已开启',
+        monitoringInactive: '实时监控已关闭',
+        monitoringStarted: '已开启实时监控',
+        monitoringStopped: '已关闭实时监控',
+        monitoringFailed: '监控启动失败',
+        sessionUpdated: '检测到新会话',
 
         // 侧边栏
         sessions: '会话',
@@ -53,6 +62,15 @@ const i18n = {
         // Header
         appTitle: 'AgentScope',
         refresh: 'Refresh',
+        monitor: 'Monitor',
+
+        // Monitoring Status
+        monitoringActive: 'Real-time monitoring active',
+        monitoringInactive: 'Real-time monitoring stopped',
+        monitoringStarted: 'Monitoring started',
+        monitoringStopped: 'Monitoring stopped',
+        monitoringFailed: 'Failed to start monitoring',
+        sessionUpdated: 'New session detected',
 
         // Sidebar
         sessions: 'Sessions',

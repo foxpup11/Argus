@@ -17,6 +17,14 @@
                 <div id="langToggle" class="lang-toggle" title="切换语言">
                     <div class="toggle-knob">EN</div>
                 </div>
+                <button id="monitorIndicator" class="btn monitor-btn" title="点击开启/关闭实时监控" onclick="toggleMonitoring()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <span data-i18n="monitor">监控</span>
+                </button>
                 <button id="refreshBtn" class="btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M23 4v6h-6M1 20v-6h6"/>
@@ -57,26 +65,28 @@
                         <h3 data-i18n="fileChanges">文件改动</h3>
                         <span id="fileCount" class="badge">0</span>
                     </div>
-                    <table id="fileTable" class="file-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 100px" data-i18n="risk">RISK</th>
-                                <th data-i18n="file">FILE</th>
-                                <th style="width: 100px" data-i18n="change">CHANGE</th>
-                                <th style="width: 60px" data-i18n="ops">OPS</th>
-                            </tr>
-                        </thead>
-                        <tbody id="fileTableBody">
-                            <tr>
-                                <td colspan="4" class="empty-state">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                    <p data-i18n="selectSession">选择会话查看改动</p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="file-table-wrapper">
+                        <table id="fileTable" class="file-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px" data-i18n="risk">RISK</th>
+                                    <th data-i18n="file">FILE</th>
+                                    <th style="width: 100px" data-i18n="change">CHANGE</th>
+                                    <th style="width: 60px" data-i18n="ops">OPS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fileTableBody">
+                                <tr>
+                                    <td colspan="4" class="empty-state">
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                        <p data-i18n="selectSession">选择会话查看改动</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Diff View -->

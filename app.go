@@ -9,14 +9,18 @@ import (
 	"time"
 
 	"agentscope-desktop/internal/diff"
+	"agentscope-desktop/internal/monitor"
 	"agentscope-desktop/internal/risk"
 	"agentscope-desktop/internal/session"
 	"agentscope-desktop/internal/session/claude"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx     context.Context
+	monitor *monitor.Monitor
 }
 
 // SessionInfo 会话简要信息（用于列表展示）
@@ -257,13 +261,13 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 
 // GetDiff 获取指定文件的 diff
 func (a *App) GetDiff(sessionID, filePath string) (string, error) {
-	// 检查文件是否存在
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return "", fmt.Errorf("文件不存在: %s (文件可能已被移动或删除)", filepath.Base(filePath))
-	}
-
 	// 如果文件路径是绝对路径，使用文件所在目录查找 Git 仓库
 	if filepath.IsAbs(filePath) {
+		// 检查文件是否存在
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			return "", fmt.Errorf("文件不存在: %s (文件可能已被移动或删除)", filepath.Base(filePath))
+		}
+
 		dir := filepath.Dir(filePath)
 		gitRoot, err := diff.FindGitRoot(dir)
 		if err == nil {
@@ -324,14 +328,76 @@ func (a *App) GetDiff(sessionID, filePath string) (string, error) {
 
 	gitRoot, err := diff.FindGitRoot(workDir)
 	if err != nil {
-		return "", fmt.Errorf("未找到 Git 仓库: %w (文件可能不在 Git 仓库中)", workDir)
+		return "", fmt.Errorf("未找到 Git 仓库: %s (文件可能不在 Git 仓库中)", workDir)
 	}
 
 	diffEngine := diff.NewEngine(gitRoot)
-	patch, err := diffEngine.GetFilePatch(filePath)
+
+	// 如果是相对路径，直接使用；如果是绝对路径，转换为相对路径
+	targetPath := filePath
+	if filepath.IsAbs(filePath) {
+		relPath, err := filepath.Rel(gitRoot, filePath)
+		if err == nil {
+			targetPath = relPath
+		}
+	}
+
+	patch, err := diffEngine.GetFilePatch(targetPath)
 	if err != nil {
 		return "", fmt.Errorf("获取 diff 失败: %w", err)
 	}
 
 	return patch, nil
+}
+
+// StartMonitoring starts watching the Claude sessions directory for changes.
+// Returns true if monitoring started successfully, false if already running.
+func (a *App) StartMonitoring() (bool, error) {
+	if a.monitor != nil && a.monitor.IsRunning() {
+		return false, nil
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return false, fmt.Errorf("获取用户目录失败: %w", err)
+	}
+
+	claudeDir := filepath.Join(homeDir, ".claude", "projects")
+	if _, err := os.Stat(claudeDir); os.IsNotExist(err) {
+		return false, fmt.Errorf("Claude 项目目录不存在: %s", claudeDir)
+	}
+
+	// Create callback that emits event to frontend
+	callback := func() {
+		// Emit event to frontend to refresh session list
+		runtime.EventsEmit(a.ctx, "session-updated", nil)
+	}
+
+	m, err := monitor.New(claudeDir, callback)
+	if err != nil {
+		return false, fmt.Errorf("创建监控器失败: %w", err)
+	}
+
+	if err := m.Start(a.ctx); err != nil {
+		return false, fmt.Errorf("启动监控器失败: %w", err)
+	}
+
+	a.monitor = m
+	return true, nil
+}
+
+// StopMonitoring stops the file system monitor.
+func (a *App) StopMonitoring() {
+	if a.monitor != nil {
+		a.monitor.Stop()
+		a.monitor = nil
+	}
+}
+
+// IsMonitoring returns whether the monitor is currently active.
+func (a *App) IsMonitoring() bool {
+	if a.monitor == nil {
+		return false
+	}
+	return a.monitor.IsRunning()
 }
