@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"agentscope-desktop/internal/analytics"
 	"agentscope-desktop/internal/diff"
 	"agentscope-desktop/internal/export"
 	"agentscope-desktop/internal/monitor"
@@ -22,9 +23,11 @@ import (
 
 // App struct
 type App struct {
-	ctx          context.Context
-	monitor      *monitor.Monitor
-	settingsMgr  *settings.Manager
+	ctx         context.Context
+	monitor     *monitor.Monitor
+	settingsMgr *settings.Manager
+	analytics   *analytics.Engine
+	metaStore   *session.MetaStore
 }
 
 // SessionInfo 会话简要信息（用于列表展示）
@@ -105,6 +108,18 @@ func (a *App) startup(ctx context.Context) {
 	mgr, err := settings.NewManager()
 	if err == nil {
 		a.settingsMgr = mgr
+	}
+
+	// 初始化 Token 分析引擎
+	engine, err := analytics.NewEngine()
+	if err == nil {
+		a.analytics = engine
+	}
+
+	// 初始化会话元数据存储
+	metaStore, err := session.NewMetaStore()
+	if err == nil {
+		a.metaStore = metaStore
 	}
 }
 
@@ -756,4 +771,340 @@ func (a *App) getSessionByID(id string) (*session.Session, error) {
 	}
 
 	return nil, fmt.Errorf("未找到会话: %s", id)
+}
+
+// ============================================
+// Token Analytics API
+// ============================================
+
+// GetTokenOverview 获取 Token 使用概览数据（仪表盘首页）
+func (a *App) GetTokenOverview() (*analytics.TokenOverview, error) {
+	if a.analytics == nil {
+		return nil, fmt.Errorf("Token 分析引擎未初始化")
+	}
+	return a.analytics.Refresh()
+}
+
+// GetTokenTrend 获取 Token 使用趋势（最近 N 天）
+func (a *App) GetTokenTrend(days int) ([]analytics.DailyUsage, error) {
+	if a.analytics == nil {
+		return nil, fmt.Errorf("Token 分析引擎未初始化")
+	}
+	return a.analytics.GetTrend(days)
+}
+
+// GetTokenByProject 获取按项目分组的 Token 使用统计
+func (a *App) GetTokenByProject() ([]analytics.ProjectStats, error) {
+	if a.analytics == nil {
+		return nil, fmt.Errorf("Token 分析引擎未初始化")
+	}
+	return a.analytics.GetProjectBreakdown()
+}
+
+// GetTokenByModel 获取按模型分组的 Token 使用统计
+func (a *App) GetTokenByModel() ([]analytics.ModelStats, error) {
+	if a.analytics == nil {
+		return nil, fmt.Errorf("Token 分析引擎未初始化")
+	}
+	return a.analytics.GetModelBreakdown()
+}
+
+// ============================================
+// Session Management Enhancement APIs
+// ============================================
+
+// SearchSessions 全文搜索会话
+func (a *App) SearchSessions(keyword string, fields []string, tags []string, favorited *bool) ([]session.SearchResult, error) {
+	if a.metaStore == nil {
+		return nil, fmt.Errorf("元数据存储未初始化")
+	}
+
+	// 获取所有会话
+	sessions, err := a.GetSessions()
+	if err != nil {
+		return nil, fmt.Errorf("获取会话列表失败: %w", err)
+	}
+
+	// 转换为可搜索的会话格式
+	searchableSessions := make([]session.SearchableSession, len(sessions))
+	for i, s := range sessions {
+		searchableSessions[i] = session.SearchableSession{
+			ID:         s.ID,
+			Prompt:     s.Prompt,
+			Model:      s.Model,
+			Branch:     s.Branch,
+			ProjectDir: s.ProjectDir,
+		}
+	}
+
+	query := session.SearchQuery{
+		Keyword:   keyword,
+		Fields:    fields,
+		Tags:      tags,
+		Favorited: favorited,
+	}
+
+	return a.metaStore.Search(searchableSessions, query), nil
+}
+
+// GetSessionMeta 获取会话元数据
+func (a *App) GetSessionMeta(sessionID string) (*session.SessionMeta, error) {
+	if a.metaStore == nil {
+		return nil, fmt.Errorf("元数据存储未初始化")
+	}
+
+	meta, ok := a.metaStore.GetMeta(sessionID)
+	if !ok {
+		// 返回空元数据
+		return &session.SessionMeta{
+			SessionID: sessionID,
+			Tags:      []string{},
+			AutoTags:  []string{},
+			Favorited: false,
+		}, nil
+	}
+
+	return meta, nil
+}
+
+// SetSessionFavorite 设置会话收藏状态
+func (a *App) SetSessionFavorite(sessionID string, favorited bool) error {
+	if a.metaStore == nil {
+		return fmt.Errorf("元数据存储未初始化")
+	}
+
+	return a.metaStore.SetFavorite(sessionID, favorited)
+}
+
+// GetFavoriteSessions 获取所有收藏的会话 ID
+func (a *App) GetFavoriteSessions() ([]string, error) {
+	if a.metaStore == nil {
+		return nil, fmt.Errorf("元数据存储未初始化")
+	}
+
+	return a.metaStore.GetFavorites(), nil
+}
+
+// AddSessionTag 为会话添加标签
+func (a *App) AddSessionTag(sessionID, tag string) error {
+	if a.metaStore == nil {
+		return fmt.Errorf("元数据存储未初始化")
+	}
+
+	return a.metaStore.AddTag(sessionID, tag)
+}
+
+// RemoveSessionTag 移除会话标签
+func (a *App) RemoveSessionTag(sessionID, tag string) error {
+	if a.metaStore == nil {
+		return fmt.Errorf("元数据存储未初始化")
+	}
+
+	return a.metaStore.RemoveTag(sessionID, tag)
+}
+
+// GetAllTags 获取所有已使用的标签
+func (a *App) GetAllTags() ([]string, error) {
+	if a.metaStore == nil {
+		return nil, fmt.Errorf("元数据存储未初始化")
+	}
+
+	return a.metaStore.GetAllTags(), nil
+}
+
+// GetCustomTags 获取用户自定义标签列表
+func (a *App) GetCustomTags() ([]session.Tag, error) {
+	if a.metaStore == nil {
+		return nil, fmt.Errorf("元数据存储未初始化")
+	}
+
+	return a.metaStore.GetCustomTags(), nil
+}
+
+// AddCustomTag 添加自定义标签
+func (a *App) AddCustomTag(name, color, description string) error {
+	if a.metaStore == nil {
+		return fmt.Errorf("元数据存储未初始化")
+	}
+
+	return a.metaStore.AddCustomTag(session.Tag{
+		Name:        name,
+		Color:       color,
+		Description: description,
+	})
+}
+
+// RemoveCustomTag 删除自定义标签
+func (a *App) RemoveCustomTag(name string) error {
+	if a.metaStore == nil {
+		return fmt.Errorf("元数据存储未初始化")
+	}
+
+	return a.metaStore.RemoveCustomTag(name)
+}
+
+// SetSessionNote 设置会话备注
+func (a *App) SetSessionNote(sessionID, note string) error {
+	if a.metaStore == nil {
+		return fmt.Errorf("元数据存储未初始化")
+	}
+
+	return a.metaStore.SetNote(sessionID, note)
+}
+
+// GetSessionNote 获取会话备注
+func (a *App) GetSessionNote(sessionID string) string {
+	if a.metaStore == nil {
+		return ""
+	}
+
+	return a.metaStore.GetNote(sessionID)
+}
+
+// ApplyAutoTagsToSession 为会话应用自动标签
+func (a *App) ApplyAutoTagsToSession(sessionID string) ([]string, error) {
+	if a.metaStore == nil {
+		return nil, fmt.Errorf("元数据存储未初始化")
+	}
+
+	// 获取会话详情
+	sess, err := a.getSessionByID(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("获取会话失败: %w", err)
+	}
+
+	// 提取文件路径和命令
+	var filePaths []string
+	var commands []string
+	for _, action := range sess.Actions {
+		if action.FilePath != "" {
+			filePaths = append(filePaths, action.FilePath)
+		}
+		if action.Type == session.ActionBash && action.Description != "" {
+			commands = append(commands, action.Description)
+		}
+	}
+
+	newTags := a.metaStore.ApplyAutoTags(sessionID, sess.Prompt, filePaths, commands)
+	return newTags, nil
+}
+
+// BatchOperation 执行批量操作
+func (a *App) BatchOperation(op session.BatchOperation) (*session.BatchOperationResult, error) {
+	if a.metaStore == nil {
+		return nil, fmt.Errorf("元数据存储未初始化")
+	}
+
+	result := &session.BatchOperationResult{
+		Success: 0,
+		Failed:  0,
+		Errors:  []string{},
+	}
+
+	for _, sessionID := range op.SessionIDs {
+		var err error
+
+		switch op.Action {
+		case "favorite":
+			err = a.metaStore.SetFavorite(sessionID, true)
+		case "unfavorite":
+			err = a.metaStore.SetFavorite(sessionID, false)
+		case "tag":
+			if op.Tag != "" {
+				err = a.metaStore.AddTag(sessionID, op.Tag)
+			}
+		case "untag":
+			if op.Tag != "" {
+				err = a.metaStore.RemoveTag(sessionID, op.Tag)
+			}
+		case "delete":
+			// 删除会话文件
+			err = a.deleteSession(sessionID)
+		case "export":
+			// 批量导出会话
+			if op.Format == "" {
+				op.Format = "markdown"
+			}
+			_, err = a.ExportSession(sessionID, op.Format, op.OutputDir)
+		default:
+			err = fmt.Errorf("未知的操作类型: %s", op.Action)
+		}
+
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", sessionID, err))
+		} else {
+			result.Success++
+		}
+	}
+
+	return result, nil
+}
+
+// deleteSession 删除会话文件
+func (a *App) deleteSession(sessionID string) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("获取用户目录失败: %w", err)
+	}
+
+	claudeDir := filepath.Join(homeDir, ".claude", "projects")
+
+	// 查找并删除会话文件
+	entries, _ := os.ReadDir(claudeDir)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		projectDir := filepath.Join(claudeDir, entry.Name())
+		jsonlFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		for _, jsonlPath := range jsonlFiles {
+			if filepath.Base(jsonlPath) == sessionID+".jsonl" || filepath.Base(jsonlPath) == sessionID {
+				return os.Remove(jsonlPath)
+			}
+		}
+	}
+
+	return fmt.Errorf("未找到会话文件: %s", sessionID)
+}
+
+// BatchExport 批量导出会话
+func (a *App) BatchExport(sessionIDs []string, format string, outputDir string) (*session.BatchOperationResult, error) {
+	op := session.BatchOperation{
+		Action:    "export",
+		SessionIDs: sessionIDs,
+		Format:    format,
+		OutputDir: outputDir,
+	}
+	return a.BatchOperation(op)
+}
+
+// GetSessionDetailWithMeta 获取带元数据的会话详情
+func (a *App) GetSessionDetailWithMeta(sessionID string) (map[string]any, error) {
+	detail, err := a.GetSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	var meta *session.SessionMeta
+	if a.metaStore != nil {
+		m, ok := a.metaStore.GetMeta(sessionID)
+		if ok {
+			meta = m
+		}
+	}
+
+	if meta == nil {
+		meta = &session.SessionMeta{
+			SessionID: sessionID,
+			Tags:      []string{},
+			AutoTags:  []string{},
+			Favorited: false,
+		}
+	}
+
+	return map[string]any{
+		"detail": detail,
+		"meta":   meta,
+	}, nil
 }

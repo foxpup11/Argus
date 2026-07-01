@@ -6,6 +6,10 @@ const i18n = {
         refresh: '刷新',
         monitor: '监控',
 
+        // Tab 导航
+        dashboard: 'Token 概览',
+        sessionsTab: '会话管理',
+
         // 监控状态
         monitoringActive: '实时监控已开启',
         monitoringInactive: '实时监控已关闭',
@@ -85,12 +89,77 @@ const i18n = {
         ruleAdded: '规则已添加',
         confirmDelete: '确定要删除这个规则吗？',
         ruleDeleted: '规则已删除',
+
+        // Dashboard — 仪表盘
+        todayTokens: '今日 Token',
+        thisMonthTokens: '本月 Token',
+        lastMonthTokens: '上月 Token',
+        totalTokensAll: '累计 Token',
+        totalSessions: '总会话数',
+        vsLastMonth: '较上月',
+        tokens: 'Token',
+        tokenTrend: 'Token 趋势（近30天）',
+        projectBreakdown: '项目 Token 分布',
+        modelDistribution: '模型分布',
+        project: '项目',
+        model: '模型',
+        projectSessions: '会话数',
+        noData: '暂无数据',
+
+        // 会话管理增强
+        // 高级搜索
+        advancedSearch: '高级搜索',
+        searchFields: '搜索范围',
+        prompt: '提示词',
+        tags: '标签',
+        filterByTag: '按标签筛选',
+        filterByStatus: '按状态筛选',
+        favorited: '已收藏',
+        applyFilter: '应用筛选',
+        searchFailed: '搜索失败',
+        noTags: '暂无标签',
+
+        // 快捷筛选
+        allSessions: '全部',
+        favorites: '收藏',
+        today: '今天',
+
+        // 批量操作
+        batchMode: '批量',
+        selected: '已选择',
+        cancel: '取消',
+        selectSessionsFirst: '请先选择会话',
+        batchFavoriteSuccess: '已收藏 {count} 个会话',
+        batchExportSuccess: '已导出 {count} 个会话',
+        batchDeleteSuccess: '已删除 {count} 个会话',
+        batchOperationFailed: '批量操作失败',
+        confirmBatchDelete: '确定要删除 {count} 个会话吗？此操作不可撤销。',
+
+        // 会话元数据
+        favorite: '收藏',
+        unfavorite: '取消收藏',
+        addedToFavorite: '已添加到收藏',
+        removedFromFavorite: '已从收藏中移除',
+        addTag: '添加标签',
+        removeTag: '移除标签',
+        tagAdded: '标签已添加',
+        tagRemoved: '标签已移除',
+        enterTagName: '请输入标签名称:',
+        addNote: '添加备注',
+        noteSaved: '备注已保存',
+        enterNote: '请输入备注:',
+        autoTagsApplied: '已应用自动标签: {tags}',
+        noNewAutoTags: '没有新的自动标签',
     },
     en: {
         // Header
         appTitle: 'AgentScope',
         refresh: 'Refresh',
         monitor: 'Monitor',
+
+        // Tab Navigation
+        dashboard: 'Token Overview',
+        sessionsTab: 'Sessions',
 
         // Monitoring Status
         monitoringActive: 'Real-time monitoring active',
@@ -171,6 +240,67 @@ const i18n = {
         ruleAdded: 'Rule added',
         confirmDelete: 'Are you sure you want to delete this rule?',
         ruleDeleted: 'Rule deleted',
+
+        // Dashboard
+        todayTokens: 'Today\'s Tokens',
+        thisMonthTokens: 'This Month',
+        lastMonthTokens: 'Last Month',
+        totalTokensAll: 'Total Tokens',
+        totalSessions: 'Total Sessions',
+        vsLastMonth: 'vs last month',
+        tokens: 'Tokens',
+        tokenTrend: 'Token Trend (Last 30 Days)',
+        projectBreakdown: 'Project Token Breakdown',
+        modelDistribution: 'Model Distribution',
+        project: 'Project',
+        model: 'Model',
+        projectSessions: 'Sessions',
+        noData: 'No data available',
+
+        // Session Management Enhancement
+        // Advanced Search
+        advancedSearch: 'Advanced Search',
+        searchFields: 'Search Fields',
+        prompt: 'Prompt',
+        tags: 'Tags',
+        filterByTag: 'Filter by Tag',
+        filterByStatus: 'Filter by Status',
+        favorited: 'Favorited',
+        applyFilter: 'Apply Filter',
+        searchFailed: 'Search failed',
+        noTags: 'No tags',
+
+        // Quick Filters
+        allSessions: 'All',
+        favorites: 'Favorites',
+        today: 'Today',
+
+        // Batch Operations
+        batchMode: 'Batch',
+        selected: 'selected',
+        cancel: 'Cancel',
+        selectSessionsFirst: 'Please select sessions first',
+        batchFavoriteSuccess: 'Favorited {count} sessions',
+        batchExportSuccess: 'Exported {count} sessions',
+        batchDeleteSuccess: 'Deleted {count} sessions',
+        batchOperationFailed: 'Batch operation failed',
+        confirmBatchDelete: 'Are you sure you want to delete {count} sessions? This cannot be undone.',
+
+        // Session Metadata
+        favorite: 'Favorite',
+        unfavorite: 'Unfavorite',
+        addedToFavorite: 'Added to favorites',
+        removedFromFavorite: 'Removed from favorites',
+        addTag: 'Add Tag',
+        removeTag: 'Remove Tag',
+        tagAdded: 'Tag added',
+        tagRemoved: 'Tag removed',
+        enterTagName: 'Enter tag name:',
+        addNote: 'Add Note',
+        noteSaved: 'Note saved',
+        enterNote: 'Enter note:',
+        autoTagsApplied: 'Auto tags applied: {tags}',
+        noNewAutoTags: 'No new auto tags',
     }
 };
 

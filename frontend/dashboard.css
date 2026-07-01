@@ -1,0 +1,613 @@
+/* ============================================
+   Dashboard — Token Analytics Styles
+   ============================================ */
+
+/* Tab Panel Visibility */
+.tab-panel {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+}
+
+.tab-panel.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Dashboard Container - 紧凑布局，一屏展示 */
+.dashboard {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ============================================
+   Header Nav Tabs
+   ============================================ */
+.header-nav {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-tertiary);
+    padding: 3px;
+    border-radius: var(--radius-md);
+}
+
+.nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-secondary);
+    transition: var(--transition);
+}
+
+.nav-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-primary);
+}
+
+.nav-tab.active {
+    background: var(--bg-primary);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+.nav-tab svg {
+    flex-shrink: 0;
+}
+
+/* ============================================
+   Overview Cards - 紧凑卡片，强制单行排列
+   ============================================ */
+.overview-cards {
+    display: flex;
+    gap: 12px;
+    flex-wrap: nowrap;
+    width: 100%;
+}
+
+.overview-card {
+    flex: 1 1 0;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    overflow: hidden;
+}
+
+.overview-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md);
+}
+
+.card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.card-icon.today {
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.12), rgba(0, 122, 255, 0.06));
+    color: #007aff;
+}
+
+.card-icon.month {
+    background: linear-gradient(135deg, rgba(52, 199, 89, 0.12), rgba(52, 199, 89, 0.06));
+    color: #34c759;
+}
+
+.card-icon.last-month {
+    background: linear-gradient(135deg, rgba(175, 82, 222, 0.12), rgba(175, 82, 222, 0.06));
+    color: #af52de;
+}
+
+.card-icon.sessions {
+    background: linear-gradient(135deg, rgba(255, 149, 0, 0.12), rgba(255, 149, 0, 0.06));
+    color: #ff9500;
+}
+
+.card-icon.total {
+    background: linear-gradient(135deg, rgba(88, 86, 214, 0.12), rgba(88, 86, 214, 0.06));
+    color: #5856d6;
+}
+
+[data-theme="dark"] .card-icon.today { background: linear-gradient(135deg, rgba(10, 132, 255, 0.2), rgba(10, 132, 255, 0.1)); color: #0a84ff; }
+[data-theme="dark"] .card-icon.month { background: linear-gradient(135deg, rgba(48, 209, 88, 0.2), rgba(48, 209, 88, 0.1)); color: #30d158; }
+[data-theme="dark"] .card-icon.last-month { background: linear-gradient(135deg, rgba(191, 90, 242, 0.2), rgba(191, 90, 242, 0.1)); color: #bf5af2; }
+[data-theme="dark"] .card-icon.sessions { background: linear-gradient(135deg, rgba(255, 159, 10, 0.2), rgba(255, 159, 10, 0.1)); color: #ff9f0a; }
+[data-theme="dark"] .card-icon.total { background: linear-gradient(135deg, rgba(94, 92, 230, 0.2), rgba(94, 92, 230, 0.1)); color: #5e5ce6; }
+
+.card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.card-label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+}
+
+.card-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.022em;
+    line-height: 1.2;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+}
+
+.card-change {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.card-change.up {
+    color: var(--danger);
+}
+
+.card-change.down {
+    color: var(--success);
+}
+
+/* ============================================
+   Dashboard Cards (Chart + Tables) - 紧凑布局
+   ============================================ */
+.dashboard-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.dashboard-row:has(.dashboard-card + .dashboard-card) {
+    grid-template-columns: 1fr 1fr;
+}
+
+.dashboard-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.card-title {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.card-title h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+/* Chart Container - 紧凑图表 */
+.chart-container {
+    padding: 12px 16px;
+    height: 180px;
+}
+
+.chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ============================================
+   Dashboard Tables - 紧凑表格
+   ============================================ */
+.dashboard-table-wrapper {
+    overflow-y: auto;
+    max-height: 200px;
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dashboard-table th {
+    position: sticky;
+    top: 0;
+    padding: 8px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+    z-index: 1;
+}
+
+.dashboard-table td {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+}
+
+.dashboard-table tbody tr:hover {
+    background: var(--bg-tertiary);
+}
+
+.dashboard-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.project-name-cell,
+.model-name-cell {
+    font-weight: 500;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.token-cell {
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 11px;
+}
+
+.empty-state-cell {
+    text-align: center;
+    color: var(--text-tertiary);
+    padding: 24px 16px !important;
+    font-size: 12px;
+}
+
+/* ============================================
+   Sessions Tab Actions
+   ============================================ */
+.sidebar-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.sidebar-actions .btn {
+    flex: 1;
+    justify-content: center;
+}
+
+/* ============================================
+   Responsive - 响应式适配
+   ============================================ */
+@media (max-width: 900px) {
+    .dashboard-row:has(.dashboard-card + .dashboard-card) {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .overview-cards {
+        flex-wrap: wrap;
+    }
+    .overview-card {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 140px;
+    }
+    .dashboard {
+        padding: 12px 16px;
+        gap: 12px;
+    }
+    .card-value {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 400px) {
+    .overview-card {
+        flex: 1 1 100%;
+    }
+}
+
+/* ============================================
+   Session Management Enhancement Styles
+   ============================================ */
+
+/* Search Wrapper Enhancement */
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.search-input {
+    flex: 1;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-icon:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.btn-icon.active {
+    background: var(--accent);
+    color: white;
+}
+
+/* Advanced Search Panel */
+.advanced-search-panel {
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+}
+
+.search-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-group label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.filter-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.filter-checkbox input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.tag-filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 80px;
+    overflow-y: auto;
+}
+
+.no-tags {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-style: italic;
+}
+
+/* Quick Filters */
+.quick-filters {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-secondary);
+    transition: var(--transition);
+}
+
+.filter-btn:hover {
+    background: var(--bg-tertiary);
+}
+
+.filter-btn.active {
+    background: var(--accent);
+    color: white;
+}
+
+.filter-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Batch Mode */
+#batchModeBtn.active {
+    background: var(--accent);
+    color: white;
+}
+
+.batch-action-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+}
+
+.batch-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.batch-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.batch-actions .btn {
+    padding: 5px 8px;
+}
+
+.btn-danger {
+    color: var(--danger);
+}
+
+.btn-danger:hover {
+    background: var(--danger);
+    color: white;
+}
+
+/* Session Item Batch Mode */
+.session-item.batch-mode {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.session-checkbox {
+    margin-top: 4px;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.session-main {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Session Meta Bar */
+.session-meta-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+}
+
+.meta-left,
+.meta-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.session-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.session-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+
+.session-tag.manual {
+    background: var(--accent-light);
+    color: var(--accent);
+}
+
+.session-tag.auto {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.tag-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0.6;
+}
+
+.tag-remove:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* Favorite Button */
+#favoriteBtn.active svg {
+    fill: var(--danger);
+    stroke: var(--danger);
+}
+
+/* Search Results Highlight */
+.search-highlight {
+    background: var(--warning-light);
+    padding: 1px 2px;
+    border-radius: 2px;
+}
