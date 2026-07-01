@@ -150,6 +150,28 @@ const i18n = {
         enterNote: '请输入备注:',
         autoTagsApplied: '已应用自动标签: {tags}',
         noNewAutoTags: '没有新的自动标签',
+
+        // 知识库
+        knowledge: '知识库',
+        knowledgeTab: '知识库',
+        plans: '计划',
+        memory: '记忆',
+        newDocument: '新建',
+        searchDocuments: '搜索文档...',
+        selectDocument: '选择文档查看',
+        selectDocumentToView: '选择文档查看内容',
+        editDocument: '编辑',
+        saveDocument: '保存',
+        deleteDocument: '删除',
+        documentSaved: '文档已保存',
+        documentDeleted: '文档已删除',
+        confirmDeleteDocument: '确定要删除这个文档吗？',
+        enterDocumentTitle: '请输入文档标题:',
+        noDocuments: '暂无文档',
+        all: '全部',
+        minutesAgo: '分钟前',
+        hoursAgo: '小时前',
+        daysAgo: '天前',
     },
     en: {
         // Header
@@ -301,6 +323,28 @@ const i18n = {
         enterNote: 'Enter note:',
         autoTagsApplied: 'Auto tags applied: {tags}',
         noNewAutoTags: 'No new auto tags',
+
+        // Knowledge
+        knowledge: 'Knowledge',
+        knowledgeTab: 'Knowledge',
+        plans: 'Plans',
+        memory: 'Memory',
+        newDocument: 'New',
+        searchDocuments: 'Search documents...',
+        selectDocument: 'Select document',
+        selectDocumentToView: 'Select a document to view',
+        editDocument: 'Edit',
+        saveDocument: 'Save',
+        deleteDocument: 'Delete',
+        documentSaved: 'Document saved',
+        documentDeleted: 'Document deleted',
+        confirmDeleteDocument: 'Are you sure you want to delete this document?',
+        enterDocumentTitle: 'Enter document title:',
+        noDocuments: 'No documents',
+        all: 'All',
+        minutesAgo: 'minutes ago',
+        hoursAgo: 'hours ago',
+        daysAgo: 'days ago',
     }
 };
 

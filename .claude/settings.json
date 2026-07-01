@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/20807/.claude -name \"*.md\" -type f 2>/dev/null | head -50)",
+      "Read(//c/Users/20807/.claude/**)",
+      "Bash(ls -la /c/Users/20807/.claude/plans/)",
+      "Read(//c/Users/20807/.claude/plans//**)",
+      "Read(//c/Users/20807/.claude/plans/**)",
+      "Bash(wails dev *)",
+      "Bash(curl -s http://localhost:34115)"
+    ]
+  }
+}

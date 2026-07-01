@@ -1,0 +1,489 @@
+/* ============================================
+   Knowledge Tab Styles
+   ============================================ */
+
+/* Knowledge Container */
+.knowledge-container {
+    display: flex;
+    height: calc(100vh - 120px);
+    overflow: hidden;
+}
+
+/* Knowledge Sidebar */
+.knowledge-sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.knowledge-sidebar .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.knowledge-sidebar .sidebar-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Knowledge Search */
+.knowledge-search {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.knowledge-search input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.knowledge-search input:focus {
+    border-color: var(--accent);
+}
+
+/* Knowledge Filters */
+.knowledge-filters {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.knowledge-filters .filter-btn {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.knowledge-filters .filter-btn:hover {
+    background: var(--border-hover);
+}
+
+.knowledge-filters .filter-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+/* Knowledge Document List */
+.knowledge-doc-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+/* Knowledge Group */
+.knowledge-group {
+    margin-bottom: 8px;
+}
+
+.knowledge-group .group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.knowledge-group .group-header:hover {
+    background: var(--border-hover);
+}
+
+.knowledge-group .group-icon {
+    transition: transform 0.2s;
+}
+
+.knowledge-group.collapsed .group-icon {
+    transform: rotate(-90deg);
+}
+
+.knowledge-group .group-name {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.knowledge-group .group-count {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.knowledge-group .group-items {
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+}
+
+.knowledge-group.collapsed .group-items {
+    max-height: 0;
+}
+
+/* Knowledge Document Item */
+.knowledge-doc-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    margin: 2px 0;
+    margin-left: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.knowledge-doc-item:hover {
+    background: var(--border-hover);
+}
+
+.knowledge-doc-item.active {
+    background: var(--accent-light);
+    border-left: 2px solid var(--accent);
+}
+
+.knowledge-doc-item .doc-icon {
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.knowledge-doc-item .doc-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.knowledge-doc-item .doc-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.knowledge-doc-item .doc-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+.knowledge-doc-item .doc-type {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+/* Knowledge Main Content */
+.knowledge-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Knowledge Toolbar */
+.knowledge-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-primary);
+}
+
+.knowledge-toolbar .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.knowledge-toolbar .doc-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.knowledge-toolbar .doc-type-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+.knowledge-toolbar .doc-type-badge.plans {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.knowledge-toolbar .doc-type-badge.memory {
+    background: rgba(168, 85, 247, 0.1);
+    color: #a855f7;
+}
+
+.knowledge-toolbar .toolbar-right {
+    display: flex;
+    gap: 8px;
+}
+
+/* Knowledge Content Area */
+.knowledge-content {
+    flex: 1;
+    overflow: hidden;
+    padding: 16px;
+}
+
+/* Knowledge Preview */
+.knowledge-preview {
+    height: 100%;
+    overflow-y: auto;
+    padding: 20px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.knowledge-preview .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-tertiary);
+}
+
+.knowledge-preview .empty-state svg {
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+/* Frontmatter Card */
+.frontmatter-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+}
+
+.frontmatter-item {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.frontmatter-item:last-child {
+    margin-bottom: 0;
+}
+
+.frontmatter-key {
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-right: 4px;
+}
+
+.frontmatter-value {
+    color: var(--text-primary);
+}
+
+/* Markdown Content Styles */
+.markdown-content {
+    line-height: 1.7;
+    color: var(--text-primary);
+}
+
+.markdown-content h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.markdown-content h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 24px 0 12px 0;
+}
+
+.markdown-content h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 20px 0 8px 0;
+}
+
+.markdown-content p {
+    margin: 0 0 12px 0;
+}
+
+.markdown-content strong {
+    font-weight: 600;
+}
+
+.markdown-content em {
+    font-style: italic;
+}
+
+.markdown-content code {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 13px;
+}
+
+.markdown-content pre {
+    background: var(--bg-tertiary);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+
+.markdown-content pre code {
+    background: none;
+    padding: 0;
+}
+
+.markdown-content ul, .markdown-content ol {
+    margin: 0 0 12px 0;
+    padding-left: 24px;
+}
+
+.markdown-content li {
+    margin-bottom: 4px;
+}
+
+.markdown-content a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.markdown-content a:hover {
+    text-decoration: underline;
+}
+
+.markdown-content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+}
+
+/* Knowledge Editor */
+.knowledge-editor {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-textarea {
+    flex: 1;
+    width: 100%;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.editor-textarea:focus {
+    border-color: var(--accent);
+}
+
+/* Button Styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    background: var(--border-hover);
+}
+
+.btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background: var(--accent);
+    opacity: 0.9;
+}
+
+.btn-danger {
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .knowledge-container {
+        flex-direction: column;
+    }
+
+    .knowledge-sidebar {
+        width: 100%;
+        min-width: 100%;
+        height: 200px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+}

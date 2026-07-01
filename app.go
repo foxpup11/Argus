@@ -12,6 +12,7 @@ import (
 	"agentscope-desktop/internal/analytics"
 	"agentscope-desktop/internal/diff"
 	"agentscope-desktop/internal/export"
+	"agentscope-desktop/internal/knowledge"
 	"agentscope-desktop/internal/monitor"
 	"agentscope-desktop/internal/risk"
 	"agentscope-desktop/internal/session"
@@ -28,6 +29,7 @@ type App struct {
 	settingsMgr *settings.Manager
 	analytics   *analytics.Engine
 	metaStore   *session.MetaStore
+	knowledge   *knowledge.Engine
 }
 
 // SessionInfo 会话简要信息（用于列表展示）
@@ -120,6 +122,12 @@ func (a *App) startup(ctx context.Context) {
 	metaStore, err := session.NewMetaStore()
 	if err == nil {
 		a.metaStore = metaStore
+	}
+
+	// 初始化知识管理引擎
+	knowledgeEngine, err := knowledge.NewEngine()
+	if err == nil {
+		a.knowledge = knowledgeEngine
 	}
 }
 
@@ -1107,4 +1115,159 @@ func (a *App) GetSessionDetailWithMeta(sessionID string) (map[string]any, error)
 		"detail": detail,
 		"meta":   meta,
 	}, nil
+}
+
+// ============================================
+// Knowledge Management API
+// ============================================
+
+// KnowledgeDocInfo 知识文档信息（前端展示用）
+type KnowledgeDocInfo struct {
+	Path        string            `json:"path"`
+	Name        string            `json:"name"`
+	Type        string            `json:"type"`
+	Project     string            `json:"project"`
+	Content     string            `json:"content"`
+	Frontmatter map[string]string `json:"frontmatter"`
+	CreatedAt   time.Time         `json:"createdAt"`
+	UpdatedAt   time.Time         `json:"updatedAt"`
+	Size        int64             `json:"size"`
+}
+
+// GetKnowledgeDocuments 获取知识文档列表
+func (a *App) GetKnowledgeDocuments(docType string, project string) ([]KnowledgeDocInfo, error) {
+	if a.knowledge == nil {
+		return nil, fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	docs, err := a.knowledge.GetAllDocuments(docType, project)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]KnowledgeDocInfo, len(docs))
+	for i, doc := range docs {
+		result[i] = KnowledgeDocInfo{
+			Path:        doc.Path,
+			Name:        doc.Name,
+			Type:        string(doc.Type),
+			Project:     doc.Project,
+			Content:     doc.Content,
+			Frontmatter: doc.Frontmatter,
+			CreatedAt:   doc.CreatedAt,
+			UpdatedAt:   doc.UpdatedAt,
+			Size:        doc.Size,
+		}
+	}
+
+	return result, nil
+}
+
+// GetKnowledgeDocument 获取单个知识文档
+func (a *App) GetKnowledgeDocument(path string) (*KnowledgeDocInfo, error) {
+	if a.knowledge == nil {
+		return nil, fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	doc, err := a.knowledge.GetDocument(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &KnowledgeDocInfo{
+		Path:        doc.Path,
+		Name:        doc.Name,
+		Type:        string(doc.Type),
+		Project:     doc.Project,
+		Content:     doc.Content,
+		Frontmatter: doc.Frontmatter,
+		CreatedAt:   doc.CreatedAt,
+		UpdatedAt:   doc.UpdatedAt,
+		Size:        doc.Size,
+	}, nil
+}
+
+// SaveKnowledgeDocument 保存知识文档
+func (a *App) SaveKnowledgeDocument(path string, content string) error {
+	if a.knowledge == nil {
+		return fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	return a.knowledge.SaveDocument(path, content)
+}
+
+// DeleteKnowledgeDocument 删除知识文档
+func (a *App) DeleteKnowledgeDocument(path string) error {
+	if a.knowledge == nil {
+		return fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	return a.knowledge.DeleteDocument(path)
+}
+
+// CreateKnowledgeDocument 创建知识文档
+func (a *App) CreateKnowledgeDocument(docType string, title string, content string, project string) (string, error) {
+	if a.knowledge == nil {
+		return "", fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	// 验证标题
+	if title == "" {
+		return "", fmt.Errorf("title cannot be empty")
+	}
+
+	// 清理标题中的特殊字符（只允许字母、数字、空格、连字符、下划线）
+	var cleanTitle strings.Builder
+	for _, r := range title {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') ||
+			r == ' ' || r == '-' || r == '_' || r == '.' {
+			cleanTitle.WriteRune(r)
+		}
+	}
+	cleanedTitle := cleanTitle.String()
+	if cleanedTitle == "" {
+		return "", fmt.Errorf("title contains only invalid characters")
+	}
+
+	return a.knowledge.CreateDocument(knowledge.DocType(docType), cleanedTitle, content, project)
+}
+
+// SearchKnowledgeDocuments 搜索知识文档
+func (a *App) SearchKnowledgeDocuments(query string, types []string, projects []string) ([]KnowledgeDocInfo, error) {
+	if a.knowledge == nil {
+		return nil, fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	// 转换类型
+	docTypes := make([]knowledge.DocType, len(types))
+	for i, t := range types {
+		docTypes[i] = knowledge.DocType(t)
+	}
+
+	filters := knowledge.SearchFilters{
+		Types:    docTypes,
+		Projects: projects,
+	}
+
+	docs, err := a.knowledge.SearchDocuments(query, filters)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]KnowledgeDocInfo, len(docs))
+	for i, doc := range docs {
+		result[i] = KnowledgeDocInfo{
+			Path:        doc.Path,
+			Name:        doc.Name,
+			Type:        string(doc.Type),
+			Project:     doc.Project,
+			Content:     doc.Content,
+			Frontmatter: doc.Frontmatter,
+			CreatedAt:   doc.CreatedAt,
+			UpdatedAt:   doc.UpdatedAt,
+			Size:        doc.Size,
+		}
+	}
+
+	return result, nil
 }

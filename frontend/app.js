@@ -5,7 +5,7 @@
 // ============================================
 let currentSessionId = null;
 let currentDiffMode = 'uncommitted';
-let currentTab = 'dashboard'; // 'dashboard' | 'sessions'
+let currentTab = 'dashboard'; // 'dashboard' | 'sessions' | 'knowledge'
 let sessions = [];
 let sessionsLoaded = false;
 
@@ -46,6 +46,7 @@ function switchTab(tab) {
     // Show/hide panels
     document.getElementById('dashboardPanel').classList.toggle('active', tab === 'dashboard');
     document.getElementById('sessionsPanel').classList.toggle('active', tab === 'sessions');
+    document.getElementById('knowledgePanel').classList.toggle('active', tab === 'knowledge');
 
     // Load data for the selected tab
     if (tab === 'dashboard') {
@@ -53,6 +54,8 @@ function switchTab(tab) {
     } else if (tab === 'sessions' && !sessionsLoaded) {
         loadSessions();
         sessionsLoaded = true;
+    } else if (tab === 'knowledge') {
+        loadKnowledgeDocuments();
     }
 }
 
