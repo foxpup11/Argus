@@ -74,4 +74,5 @@ type Session struct {
 	Actions     []Action
 	FileChanges []FileChange
 	TokenUsage  TokenUsage
+	Messages    []Message    // 完整消息历史
 }

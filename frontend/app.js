@@ -207,6 +207,9 @@ async function selectSession(sessionId) {
     try {
         const detail = await window.go.main.App.GetSession(sessionId);
         renderSessionDetail(detail);
+
+        // 加载对话记录
+        await loadConversation(sessionId);
     } catch (error) {
         console.error('Failed to load session detail:', error);
     }
@@ -219,6 +222,12 @@ function renderSessionDetail(detail) {
 
     const fileTableBody = document.getElementById('fileTableBody');
     const fileCount = document.getElementById('fileCount');
+    const filesTabCount = document.getElementById('filesTabCount');
+
+    // 更新文件标签计数
+    if (filesTabCount) {
+        filesTabCount.textContent = detail.fileChanges ? detail.fileChanges.length : 0;
+    }
 
     if (!detail.fileChanges || detail.fileChanges.length === 0) {
         fileTableBody.innerHTML = `
@@ -877,6 +886,9 @@ async function selectSessionWithMeta(sessionId) {
 
         // 显示元数据栏
         document.getElementById('sessionMetaBar').style.display = 'flex';
+
+        // 加载对话记录
+        await loadConversation(sessionId);
     } catch (error) {
         console.error('Failed to load session detail:', error);
     }

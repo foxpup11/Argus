@@ -71,13 +71,15 @@ function renderKnowledgeDocList(docs) {
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     ${doc.type === 'plans'
                                         ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'
+                                        : doc.type === 'claudemd'
+                                        ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'
                                         : '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'}
                                 </svg>
                             </div>
                             <div class="doc-info">
                                 <div class="doc-title">${escapeHtml(doc.name)}</div>
                                 <div class="doc-meta">
-                                    <span class="doc-type">${doc.type === 'plans' ? 'Plan' : 'Memory'}</span>
+                                    <span class="doc-type">${doc.type === 'plans' ? 'Plan' : doc.type === 'claudemd' ? 'CLAUDE.md' : 'Memory'}</span>
                                     <span class="doc-time">${formatKnowledgeTime(doc.updatedAt)}</span>
                                 </div>
                             </div>
@@ -135,15 +137,24 @@ async function selectKnowledgeDoc(path) {
         const docType = document.getElementById('knowledgeDocType');
         if (docName) docName.textContent = doc.name;
         if (docType) {
-            docType.textContent = doc.type === 'plans' ? 'Plan' : 'Memory';
+            const typeLabels = { plans: 'Plan', memory: 'Memory', claudemd: 'CLAUDE.md' };
+            docType.textContent = typeLabels[doc.type] || doc.type;
             docType.className = `doc-type-badge ${doc.type}`;
         }
 
-        // 显示预览
-        renderKnowledgePreview(doc.content);
-
-        // 重置编辑状态
-        exitKnowledgeEdit();
+        // 根据文档类型切换编辑器
+        if (doc.type === 'claudemd') {
+            // CLAUDE.md 使用分节编辑器
+            hideDefaultEditors();
+            showClaudeMDEditor();
+            loadClaudeMDSections(path, doc.project);
+        } else {
+            // 其他文档使用普通编辑器
+            hideClaudeMDEditor();
+            showDefaultEditors();
+            renderKnowledgePreview(doc.content);
+            exitKnowledgeEdit();
+        }
     } catch (error) {
         console.error('Failed to load document:', error);
     }
@@ -390,6 +401,53 @@ function exitKnowledgeEdit() {
 }
 
 // ============================================
+// Editor Visibility Helpers
+// ============================================
+
+/**
+ * 隐藏默认编辑器（预览 + textarea 编辑器）
+ */
+function hideDefaultEditors() {
+    const preview = document.getElementById('knowledgePreview');
+    const editor = document.getElementById('knowledgeEditor');
+    if (preview) preview.style.display = 'none';
+    if (editor) editor.style.display = 'none';
+
+    // 隐藏默认工具栏按钮
+    const editBtn = document.getElementById('knowledgeEditBtn');
+    const saveBtn = document.getElementById('knowledgeSaveBtn');
+    if (editBtn) editBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'none';
+}
+
+/**
+ * 显示默认编辑器
+ */
+function showDefaultEditors() {
+    const preview = document.getElementById('knowledgePreview');
+    if (preview) preview.style.display = 'block';
+
+    const editBtn = document.getElementById('knowledgeEditBtn');
+    if (editBtn) editBtn.style.display = 'inline-flex';
+}
+
+/**
+ * 显示 CLAUDE.md 分节编辑器
+ */
+function showClaudeMDEditor() {
+    const editor = document.getElementById('claudeMDEditor');
+    if (editor) editor.style.display = 'flex';
+}
+
+/**
+ * 隐藏 CLAUDE.md 分节编辑器
+ */
+function hideClaudeMDEditor() {
+    const editor = document.getElementById('claudeMDEditor');
+    if (editor) editor.style.display = 'none';
+}
+
+// ============================================
 // Document Operations
 // ============================================
 
@@ -445,6 +503,10 @@ async function deleteKnowledgeDoc() {
         const docType = document.getElementById('knowledgeDocType');
         if (docName) docName.textContent = t('selectDocument') || '选择文档查看';
         if (docType) docType.textContent = '';
+
+        // 隐藏 CLAUDE.md 编辑器
+        hideClaudeMDEditor();
+        showDefaultEditors();
     } catch (error) {
         console.error('Failed to delete document:', error);
         showToast(t('deleteFailed') || '删除失败');
@@ -452,14 +514,18 @@ async function deleteKnowledgeDoc() {
 }
 
 async function createNewDocument() {
+    // 根据当前筛选类型决定创建什么文档
+    const docType = currentKnowledgeType === 'claudemd' ? 'claudemd' : 'plans';
     const title = prompt(t('enterDocumentTitle') || '请输入文档标题:');
     if (!title) return;
 
     try {
-        const path = await window.go.main.App.CreateKnowledgeDocument('plans', title, '', '');
+        const path = await window.go.main.App.CreateKnowledgeDocument(docType, title, '', '');
         await loadKnowledgeDocuments(currentKnowledgeType);
         await selectKnowledgeDoc(path);
-        toggleKnowledgeEdit();
+        if (docType !== 'claudemd') {
+            toggleKnowledgeEdit();
+        }
     } catch (error) {
         console.error('Failed to create document:', error);
         showToast(t('createFailed') || '创建失败');

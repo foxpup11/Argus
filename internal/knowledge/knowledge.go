@@ -65,6 +65,8 @@ func (e *Engine) GetAllDocuments(docType string, project string) ([]KnowledgeDoc
 	scanPlans := docType == "" || docType == "all" || docType == string(DocTypePlans)
 	// 判断是否需要扫描 memory
 	scanMemory := docType == "" || docType == "all" || docType == string(DocTypeMemory)
+	// 判断是否需要扫描 CLAUDE.md
+	scanClaudeMD := docType == "" || docType == "all" || docType == string(DocTypeClaudeMD)
 
 	// 扫描 plans/
 	if scanPlans {
@@ -79,6 +81,14 @@ func (e *Engine) GetAllDocuments(docType string, project string) ([]KnowledgeDoc
 		memoryDocs, err := e.scanMemory(project)
 		if err == nil {
 			docs = append(docs, memoryDocs...)
+		}
+	}
+
+	// 扫描 CLAUDE.md
+	if scanClaudeMD {
+		claudeMDDocs, err := e.scanClaudeMD()
+		if err == nil {
+			docs = append(docs, claudeMDDocs...)
 		}
 	}
 
@@ -180,6 +190,15 @@ func (e *Engine) CreateDocument(docType DocType, title string, content string, p
 			return "", fmt.Errorf("failed to create memory directory: %w", err)
 		}
 		path = filepath.Join(memoryDir, title+".md")
+	case DocTypeClaudeMD:
+		// CLAUDE.md 创建
+		var err error
+		path, err = e.createClaudeMD(title, content, project)
+		if err != nil {
+			return "", err
+		}
+		// 跳过下面的 SaveDocument，因为 createClaudeMD 已经写入了文件
+		return path, nil
 	default:
 		path = filepath.Join(e.homeDir, ".claude", "plans", title+".md")
 	}

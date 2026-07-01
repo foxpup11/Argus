@@ -1,0 +1,178 @@
+/* ============================================
+   CLAUDE.md Section Editor Styles
+   ============================================ */
+
+/* Section Editor Container */
+.claude-md-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-primary);
+}
+
+/* Section Navigation + Editor Layout */
+.claude-md-editor-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Section Navigation Sidebar */
+.section-nav {
+    width: 180px;
+    min-width: 180px;
+    border-right: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    padding: 12px 0;
+    overflow-y: auto;
+}
+
+.section-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 13px;
+    transition: all 0.15s ease;
+    border-left: 3px solid transparent;
+}
+
+.section-nav-item:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.section-nav-item.active {
+    background: var(--bg-active);
+    color: var(--accent-color);
+    border-left-color: var(--accent-color);
+    font-weight: 500;
+}
+
+.section-nav-item .section-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+}
+
+.section-nav-item.active .section-icon {
+    opacity: 1;
+}
+
+/* Section Editor Area */
+.section-editor-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.section-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+
+.section-editor-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.section-editor-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.section-editor-content {
+    flex: 1;
+    padding: 16px 20px;
+    overflow-y: auto;
+}
+
+.section-textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s ease;
+    tab-size: 2;
+}
+
+.section-textarea:focus {
+    border-color: var(--accent-color);
+}
+
+/* Section Preview */
+.section-preview {
+    padding: 16px 20px;
+    overflow-y: auto;
+}
+
+.section-preview .markdown-body {
+    max-width: 800px;
+}
+
+/* Section Editor Footer */
+.section-editor-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Toggle Preview Button */
+.toggle-preview-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.toggle-preview-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.toggle-preview-btn.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .section-nav {
+        width: 140px;
+        min-width: 140px;
+    }
+
+    .section-nav-item {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}

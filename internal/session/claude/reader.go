@@ -68,9 +68,9 @@ func (r *Reader) Read(path string) (*session.Session, error) {
 	var lastTime time.Time
 
 	scanner := bufio.NewScanner(file)
-	// 增加缓冲区到 50MB，支持大型会话日志
+	// 使用较小的初始缓冲区，仅在需要时扩展到最大值
 	const maxScanTokenSize = 50 * 1024 * 1024
-	scanner.Buffer(make([]byte, maxScanTokenSize), maxScanTokenSize)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxScanTokenSize)
 
 	seenPrompts := make(map[string]bool)
 	seenMessageUUIDs := make(map[string]bool) // 用于去重 token 统计
@@ -121,6 +121,7 @@ func (r *Reader) Read(path string) (*session.Session, error) {
 				seenMessageUUIDs[event.UUID] = true
 				sess.TokenUsage.InputTokens += event.Message.Usage.InputTokens
 				sess.TokenUsage.OutputTokens += event.Message.Usage.OutputTokens
+				sess.TokenUsage.TotalTokens = sess.TokenUsage.InputTokens + sess.TokenUsage.OutputTokens
 			}
 
 			// 解析 content blocks
@@ -133,6 +134,16 @@ func (r *Reader) Read(path string) (*session.Session, error) {
 					r.parseContentBlock(sess, blockMap, ts)
 				}
 			}
+
+			// 构建 assistant 消息
+			msg := session.Message{
+				ID:        event.UUID,
+				Type:      session.MessageTypeAssistant,
+				Model:     event.Message.Model,
+				Timestamp: ts,
+				Content:   r.parseMessageContent(event.Message.Content),
+			}
+			sess.Messages = append(sess.Messages, msg)
 		}
 
 		// 处理 user 消息（提取用户提示）
@@ -146,6 +157,16 @@ func (r *Reader) Read(path string) (*session.Session, error) {
 					}
 					seenPrompts[content] = true
 				}
+				// 构建 user 消息
+				msg := session.Message{
+					ID:        event.UUID,
+					Type:      session.MessageTypeUser,
+					Timestamp: ts,
+					Content: []session.ContentBlock{
+						{Type: session.ContentTypeText, Text: content},
+					},
+				}
+				sess.Messages = append(sess.Messages, msg)
 			case []any:
 				// 数组格式，提取第一个 text 类型的内容
 				for _, block := range content {
@@ -161,6 +182,14 @@ func (r *Reader) Read(path string) (*session.Session, error) {
 						}
 					}
 				}
+				// 构建 user 消息（包含所有 content blocks）
+				msg := session.Message{
+					ID:        event.UUID,
+					Type:      session.MessageTypeUser,
+					Timestamp: ts,
+					Content:   r.parseUserContent(content),
+				}
+				sess.Messages = append(sess.Messages, msg)
 			}
 		}
 	}
@@ -257,6 +286,105 @@ func extractFilePath(toolName string, input map[string]any) string {
 		}
 	}
 	return ""
+}
+
+// parseMessageContent 解析 assistant 消息的 content blocks
+func (r *Reader) parseMessageContent(content any) []session.ContentBlock {
+	// 处理字符串类型的 content
+	if text, ok := content.(string); ok {
+		return []session.ContentBlock{
+			{Type: session.ContentTypeText, Text: text},
+		}
+	}
+
+	// 处理数组类型的 content
+	blocks, ok := content.([]any)
+	if !ok {
+		return nil
+	}
+
+	var result []session.ContentBlock
+	for _, block := range blocks {
+		blockMap, ok := block.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		blockType, _ := blockMap["type"].(string)
+		switch blockType {
+		case "thinking":
+			thinking, _ := blockMap["thinking"].(string)
+			result = append(result, session.ContentBlock{
+				Type:     session.ContentTypeThinking,
+				Thinking: thinking,
+			})
+		case "text":
+			text, _ := blockMap["text"].(string)
+			result = append(result, session.ContentBlock{
+				Type: session.ContentTypeText,
+				Text: text,
+			})
+		case "tool_use":
+			name, _ := blockMap["name"].(string)
+			id, _ := blockMap["id"].(string)
+			result = append(result, session.ContentBlock{
+				Type:     session.ContentTypeToolUse,
+				ToolName: name,
+				ToolID:   id,
+				Input:    blockMap["input"],
+			})
+		}
+	}
+	return result
+}
+
+// parseUserContent 解析 user 消息的 content blocks
+func (r *Reader) parseUserContent(content any) []session.ContentBlock {
+	blocks, ok := content.([]any)
+	if !ok {
+		return nil
+	}
+
+	var result []session.ContentBlock
+	for _, block := range blocks {
+		blockMap, ok := block.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		blockType, _ := blockMap["type"].(string)
+		switch blockType {
+		case "text":
+			text, _ := blockMap["text"].(string)
+			result = append(result, session.ContentBlock{
+				Type: session.ContentTypeText,
+				Text: text,
+			})
+		case "tool_result":
+			toolID, _ := blockMap["tool_use_id"].(string)
+			// tool_result 的 content 可以是字符串或内容块数组
+			var resultContent string
+			switch c := blockMap["content"].(type) {
+			case string:
+				resultContent = c
+			case []any:
+				// 从数组中提取文本
+				for _, item := range c {
+					if m, ok := item.(map[string]any); ok {
+						if text, ok := m["text"].(string); ok {
+							resultContent += text
+						}
+					}
+				}
+			}
+			result = append(result, session.ContentBlock{
+				Type:   session.ContentTypeToolResult,
+				ToolID: toolID,
+				Result: resultContent,
+			})
+		}
+	}
+	return result
 }
 
 // DetectFormat 检测文件是否为 Claude Code JSONL 格式

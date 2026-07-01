@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -108,25 +109,33 @@ func (a *App) startup(ctx context.Context) {
 
 	// 初始化设置管理器
 	mgr, err := settings.NewManager()
-	if err == nil {
+	if err != nil {
+		log.Printf("WARN: 设置管理器初始化失败: %v", err)
+	} else {
 		a.settingsMgr = mgr
 	}
 
 	// 初始化 Token 分析引擎
 	engine, err := analytics.NewEngine()
-	if err == nil {
+	if err != nil {
+		log.Printf("WARN: Token分析引擎初始化失败: %v", err)
+	} else {
 		a.analytics = engine
 	}
 
 	// 初始化会话元数据存储
 	metaStore, err := session.NewMetaStore()
-	if err == nil {
+	if err != nil {
+		log.Printf("WARN: 会话元数据存储初始化失败: %v", err)
+	} else {
 		a.metaStore = metaStore
 	}
 
 	// 初始化知识管理引擎
 	knowledgeEngine, err := knowledge.NewEngine()
-	if err == nil {
+	if err != nil {
+		log.Printf("WARN: 知识管理引擎初始化失败: %v", err)
+	} else {
 		a.knowledge = knowledgeEngine
 	}
 }
@@ -352,6 +361,15 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 			OutputTokens: sess.TokenUsage.OutputTokens,
 		},
 	}, nil
+}
+
+// GetSessionMessages 获取会话的完整消息历史
+func (a *App) GetSessionMessages(sessionID string) ([]session.Message, error) {
+	sess, err := a.getSessionByID(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("获取会话失败: %w", err)
+	}
+	return sess.Messages, nil
 }
 
 // GetDiff 获取指定文件的 diff
@@ -1266,6 +1284,163 @@ func (a *App) SearchKnowledgeDocuments(query string, types []string, projects []
 			CreatedAt:   doc.CreatedAt,
 			UpdatedAt:   doc.UpdatedAt,
 			Size:        doc.Size,
+		}
+	}
+
+	return result, nil
+}
+
+// ============================================
+// CLAUDE.md Editor APIs
+// ============================================
+
+// ClaudeMDTemplateInfo CLAUDE.md 模板信息
+type ClaudeMDTemplateInfo struct {
+	Sections []knowledge.ClaudeMDSection `json:"sections"`
+}
+
+// ClaudeMDProjectInfo CLAUDE.md 项目信息
+type ClaudeMDProjectInfo struct {
+	Name      string `json:"name"`
+	HasCLAUDE bool   `json:"hasClaudeMD"`
+	Path      string `json:"path"`
+	RootDir   string `json:"rootDir"`
+}
+
+// CLAUDEProjectInfo 前端展示的项目信息
+type CLAUDEProjectInfo struct {
+	Name         string   `json:"name"`
+	Language     string   `json:"language"`
+	LanguageIcon string   `json:"languageIcon"`
+	Framework    string   `json:"framework"`
+	BuildTool    string   `json:"buildTool"`
+	HasTests     bool     `json:"hasTests"`
+	HasCI        bool     `json:"hasCI"`
+	HasDocker    bool     `json:"hasDocker"`
+	MainDirs     []string `json:"mainDirs"`
+	ConfigFiles  []string `json:"configFiles"`
+}
+
+// GetClaudeMDTemplate 获取 CLAUDE.md 默认模板
+func (a *App) GetClaudeMDTemplate(projectName string) (*ClaudeMDTemplateInfo, error) {
+	content := knowledge.GetClaudeMDTemplate(projectName)
+	sections := knowledge.ParseClaudeMDSections(content)
+	return &ClaudeMDTemplateInfo{Sections: sections}, nil
+}
+
+// ParseClaudeMDSections 解析 CLAUDE.md 为分节
+func (a *App) ParseClaudeMDSections(path string) ([]knowledge.ClaudeMDSection, error) {
+	if a.knowledge == nil {
+		return nil, fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	doc, err := a.knowledge.GetDocument(path)
+	if err != nil {
+		return nil, fmt.Errorf("读取 CLAUDE.md 失败: %w", err)
+	}
+
+	sections := knowledge.ParseClaudeMDSections(doc.Content)
+	return sections, nil
+}
+
+// SaveClaudeMDSections 保存分节编辑结果
+func (a *App) SaveClaudeMDSections(path string, projectName string, sections []knowledge.ClaudeMDSection) error {
+	if a.knowledge == nil {
+		return fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	content := knowledge.SerializeClaudeMDSections(projectName, sections)
+	return a.knowledge.SaveDocument(path, content)
+}
+
+// GenerateClaudeMDFromProject 从项目结构自动生成 CLAUDE.md
+func (a *App) GenerateClaudeMDFromProject(projectDir string) (string, error) {
+	info, err := knowledge.DetectProject(projectDir)
+	if err != nil {
+		return "", fmt.Errorf("检测项目失败: %w", err)
+	}
+
+	content := knowledge.GenerateClaudeMDFromProject(info)
+	return content, nil
+}
+
+// DetectProjectInfo 检测项目信息
+func (a *App) DetectProjectInfo(projectDir string) (*CLAUDEProjectInfo, error) {
+	info, err := knowledge.DetectProject(projectDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CLAUDEProjectInfo{
+		Name:         info.Name,
+		Language:     info.Language,
+		LanguageIcon: info.LanguageIcon,
+		Framework:    info.Framework,
+		BuildTool:    info.BuildTool,
+		HasTests:     info.HasTests,
+		HasCI:        info.HasCI,
+		HasDocker:    info.HasDocker,
+		MainDirs:     info.MainDirs,
+		ConfigFiles:  info.ConfigFiles,
+	}, nil
+}
+
+// GetCLAUDEMDProjects 获取所有有 CLAUDE.md 的项目列表
+func (a *App) GetCLAUDEMDProjects() ([]ClaudeMDProjectInfo, error) {
+	if a.knowledge == nil {
+		return nil, fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	projects, err := a.knowledge.GetClaudeMDProjects()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]ClaudeMDProjectInfo, len(projects))
+	for i, p := range projects {
+		result[i] = ClaudeMDProjectInfo{
+			Name:      p.Name,
+			HasCLAUDE: p.HasCLAUDE,
+			Path:      p.Path,
+			RootDir:   p.RootDir,
+		}
+	}
+
+	return result, nil
+}
+
+// CLAUDEMDBatchUpdate 批量更新项
+type CLAUDEMDBatchUpdate struct {
+	Project string `json:"project"`
+	Content string `json:"content"`
+}
+
+// BatchCLAUDEMDResult 批量操作结果
+type BatchCLAUDEMDResult struct {
+	Success int      `json:"success"`
+	Failed  int      `json:"failed"`
+	Errors  []string `json:"errors"`
+}
+
+// BatchUpdateCLAUDEMD 批量更新多个项目的 CLAUDE.md
+func (a *App) BatchUpdateCLAUDEMD(updates []CLAUDEMDBatchUpdate) (*BatchCLAUDEMDResult, error) {
+	if a.knowledge == nil {
+		return nil, fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	result := &BatchCLAUDEMDResult{
+		Success: 0,
+		Failed:  0,
+		Errors:  []string{},
+	}
+
+	for _, update := range updates {
+		_, err := a.knowledge.CreateDocument(knowledge.DocTypeClaudeMD, "CLAUDE.md", update.Content, update.Project)
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", update.Project, err))
+		} else {
+			result.Success++
 		}
 	}
 

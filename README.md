@@ -7,7 +7,7 @@
     <img src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go" alt="Go">
     <img src="https://img.shields.io/badge/Wails-v2-5C2D91?style=flat-square" alt="Wails">
     <img src="https://img.shields.io/badge/Platform-Windows-lightgrey?style=flat-square" alt="Platform">
-    <img src="https://img.shields.io/badge/Version-v0.3.0-blue?style=flat-square" alt="Version">
+    <img src="https://img.shields.io/badge/Version-v0.4.1-blue?style=flat-square" alt="Version">
     <img src="https://img.shields.io/github/license/foxpup11/agentscope?style=flat-square" alt="License">
     <img src="https://img.shields.io/github/stars/foxpup11/agentscope?style=social" alt="Stars">
   </p>

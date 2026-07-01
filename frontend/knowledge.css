@@ -487,3 +487,127 @@
         border-bottom: 1px solid var(--border-color);
     }
 }
+
+/* ============================================
+   Generator Modal Styles
+   ============================================ */
+
+.generator-layout {
+    display: flex;
+    gap: 16px;
+    min-height: 400px;
+}
+
+.generator-sidebar {
+    width: 240px;
+    min-width: 240px;
+    border-right: 1px solid var(--border-color);
+    padding-right: 16px;
+}
+
+.generator-sidebar h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.generator-project-list {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.generator-project-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 4px;
+}
+
+.generator-project-item:hover {
+    background: var(--bg-hover);
+}
+
+.generator-project-item.active {
+    background: var(--bg-active);
+    border: 1px solid var(--accent-color);
+}
+
+.generator-project-item .project-icon {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.generator-project-item .project-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.generator-project-item .project-status {
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.generator-project-item .status-has {
+    color: #22c55e;
+}
+
+.generator-project-item .status-none {
+    color: var(--text-secondary);
+}
+
+.generator-main {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.project-detect-result {
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.detect-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 13px;
+}
+
+.detect-label {
+    color: var(--text-secondary);
+}
+
+.detect-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.generator-preview {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 16px;
+    min-height: 200px;
+    background: var(--bg-primary);
+}
+
+.generated-preview {
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* Modal Footer */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 16px;
+}

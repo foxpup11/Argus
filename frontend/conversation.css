@@ -1,0 +1,191 @@
+/* ============================================
+   Conversation Viewer Styles
+   ============================================ */
+
+/* Conversation Section */
+.conversation-section {
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+    max-height: 600px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 16px;
+}
+
+/* Conversation Header */
+.conversation-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+}
+
+.conversation-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.conversation-count {
+    background: var(--bg-primary);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+/* Conversation List */
+.conversation-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Message Base */
+.msg-user,
+.msg-assistant,
+.msg-tool-result {
+    border-radius: 8px;
+    padding: 12px;
+    max-width: 100%;
+}
+
+/* User Message */
+.msg-user {
+    background: rgba(59, 130, 246, 0.08);
+    border-left: 3px solid #3b82f6;
+}
+
+.msg-user .msg-role {
+    color: #3b82f6;
+}
+
+/* Assistant Message */
+.msg-assistant {
+    background: var(--bg-secondary);
+    border-left: 3px solid var(--text-secondary);
+}
+
+.msg-assistant .msg-role {
+    color: var(--text-secondary);
+}
+
+/* Tool Result */
+.msg-tool-result {
+    background: rgba(34, 197, 94, 0.08);
+    border-left: 3px solid #22c55e;
+}
+
+.msg-tool-result .msg-role {
+    color: #22c55e;
+}
+
+/* Message Header */
+.msg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.msg-role {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.msg-time {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Message Body */
+.msg-body {
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text-primary);
+}
+
+.msg-body pre {
+    background: var(--bg-primary);
+    padding: 8px 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 12px;
+    margin: 0;
+}
+
+/* Thinking Block */
+.msg-thinking {
+    background: var(--bg-primary);
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.thinking-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-color);
+    margin-right: 8px;
+    font-style: normal;
+}
+
+/* Tool Use */
+.msg-tool-use {
+    background: var(--bg-primary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.tool-label {
+    color: var(--accent-color);
+}
+
+/* Text Block */
+.msg-text {
+    margin-bottom: 4px;
+}
+
+.msg-text:last-child {
+    margin-bottom: 0;
+}
+
+/* Empty State */
+.conversation-list .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .conversation-list {
+        padding: 12px;
+    }
+
+    .msg-user,
+    .msg-assistant,
+    .msg-tool-result {
+        padding: 10px;
+    }
+}

@@ -9,5 +9,11 @@
   "author": {
     "name": "sizhen",
     "email": "sizhen02621@gmail.com"
+  },
+  "info": {
+    "productName": "AgentScope Desktop",
+    "productVersion": "0.4.1",
+    "companyName": "sizhen",
+    "copyright": "sizhen"
   }
 }
