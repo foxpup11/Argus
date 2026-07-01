@@ -56,8 +56,6 @@
 
 选择左侧任意会话，即可查看对话记录、文件改动、Token 消耗。
 
-![预览图](docs/images/preview.png)
-
 ---
 
 ## ✨ 功能一览
@@ -125,7 +123,7 @@
 ![Token 仪表盘](docs/images/preview.png)
 
 ![会话管理](docs/images/preview2.png)
-
+![预览图](docs/images/preview3.png)
 ---
 
 ## 🛡️ 风险评估引擎
