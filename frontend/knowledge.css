@@ -34,6 +34,11 @@
     font-weight: 600;
 }
 
+.knowledge-sidebar .sidebar-actions {
+    display: flex;
+    gap: 4px;
+}
+
 /* Knowledge Search */
 .knowledge-search {
     padding: 12px 16px;
@@ -58,15 +63,19 @@
 
 /* Knowledge Filters */
 .knowledge-filters {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
 }
 
 .knowledge-filters .filter-btn {
-    flex: 1;
-    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: 6px;
     background: var(--bg-primary);
@@ -74,6 +83,8 @@
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .knowledge-filters .filter-btn:hover {
@@ -84,6 +95,15 @@
     background: var(--accent);
     color: white;
     border-color: var(--accent);
+}
+
+.knowledge-filters .filter-btn svg {
+    flex-shrink: 0;
+}
+
+.knowledge-filters .filter-btn span {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Knowledge Document List */
@@ -125,7 +145,6 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--text-secondary);
-    text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
@@ -234,6 +253,22 @@
     font-size: 14px;
     font-weight: 500;
     color: var(--text-primary);
+}
+
+.knowledge-toolbar .doc-name:hover {
+    color: var(--accent);
+}
+
+.knowledge-toolbar .doc-name-input {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    padding: 4px 8px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    outline: none;
+    min-width: 150px;
 }
 
 .knowledge-toolbar .doc-type-badge {
@@ -486,6 +521,130 @@
         border-right: none;
         border-bottom: 1px solid var(--border-color);
     }
+}
+
+/* ============================================
+   Create Document Modal Styles
+   ============================================ */
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.radio-label:hover {
+    background: var(--border-hover);
+}
+
+.radio-label input[type="radio"] {
+    margin: 0;
+}
+
+.radio-label:has(input[type="radio"]:checked) {
+    background: var(--accent-light);
+    border-color: var(--accent);
+}
+
+.radio-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.project-select-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+}
+
+.project-select-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.project-select-item:hover {
+    background: var(--border-hover);
+}
+
+.project-select-item.active {
+    background: var(--accent-light);
+    border-left: 2px solid var(--accent);
+}
+
+.project-select-item svg {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+/* ============================================
+   Group Add Button Styles
+   ============================================ */
+
+.group-add-btn {
+    padding: 4px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+}
+
+.group-header:hover .group-add-btn {
+    opacity: 1;
+}
+
+.group-add-btn:hover {
+    background: var(--accent-light);
+    color: var(--accent);
+}
+
+/* Empty Project Hint */
+.empty-project-hint {
+    padding: 12px 16px;
+    margin-left: 16px;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    font-style: italic;
 }
 
 /* ============================================

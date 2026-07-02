@@ -13,9 +13,10 @@ import (
 )
 
 type Engine struct {
-	homeDir string
-	mu      sync.RWMutex
-	cache   *TokenOverview
+	homeDir   string
+	mu        sync.RWMutex
+	cache     *TokenOverview
+	refreshMu sync.Mutex
 }
 
 func NewEngine() (*Engine, error) {
@@ -44,6 +45,19 @@ func (e *Engine) GetOverview() (*TokenOverview, error) {
 		return e.cache, nil
 	}
 	e.mu.RUnlock()
+
+	// 使用互斥锁防止并发刷新
+	e.refreshMu.Lock()
+	defer e.refreshMu.Unlock()
+
+	// 再次检查缓存，避免重复刷新
+	e.mu.RLock()
+	if e.cache != nil {
+		defer e.mu.RUnlock()
+		return e.cache, nil
+	}
+	e.mu.RUnlock()
+
 	return e.Refresh()
 }
 

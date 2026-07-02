@@ -16,15 +16,17 @@ import (
 
 // Monitor watches a directory for file system changes and triggers callbacks.
 type Monitor struct {
-	watcher  *fsnotify.Watcher
-	watchDir string
-	callback func()
-	stopCh   chan struct{}
-	doneCh   chan struct{}
-	mu       sync.RWMutex
-	running  bool
-	debounce time.Duration
-	logger   *log.Logger
+	watcher      *fsnotify.Watcher
+	watchDir     string
+	callback     func()
+	stopCh       chan struct{}
+	doneCh       chan struct{}
+	mu           sync.RWMutex
+	running      bool
+	debounce     time.Duration
+	logger       *log.Logger
+	pendingMu    sync.Mutex
+	pendingEvent bool
 }
 
 // Option configures the Monitor.
@@ -143,7 +145,6 @@ func (m *Monitor) watchLoop(ctx context.Context) {
 	defer close(m.doneCh)
 
 	var debounceTimer *time.Timer
-	var pendingEvent bool
 
 	for {
 		select {
@@ -176,11 +177,18 @@ func (m *Monitor) watchLoop(ctx context.Context) {
 				debounceTimer.Stop()
 			}
 
-			pendingEvent = true
+			m.pendingMu.Lock()
+			m.pendingEvent = true
+			m.pendingMu.Unlock()
+
 			debounceTimer = time.AfterFunc(m.debounce, func() {
-				if pendingEvent {
-					pendingEvent = false
+				m.pendingMu.Lock()
+				if m.pendingEvent {
+					m.pendingEvent = false
+					m.pendingMu.Unlock()
 					m.triggerCallback()
+				} else {
+					m.pendingMu.Unlock()
 				}
 			})
 

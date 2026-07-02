@@ -132,6 +132,89 @@ func (e *Engine) DeleteDocument(path string) error {
 	return os.Remove(path)
 }
 
+// RenameDocument 重命名文档（更新 frontmatter 中的 name 字段）
+func (e *Engine) RenameDocument(path string, newName string) error {
+	// 验证路径安全性
+	if err := e.validatePath(path); err != nil {
+		return err
+	}
+
+	// 读取文件内容
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	// 按行处理，精确替换 frontmatter 中的 name 字段
+	lines := strings.Split(string(content), "\n")
+	var result []string
+	inFrontmatter := false
+	frontmatterStart := -1
+	frontmatterEnd := -1
+
+	// 找到 frontmatter 的范围
+	for i, line := range lines {
+		if i == 0 && strings.TrimSpace(line) == "---" {
+			inFrontmatter = true
+			frontmatterStart = i
+			continue
+		}
+		if inFrontmatter && strings.TrimSpace(line) == "---" {
+			frontmatterEnd = i
+			inFrontmatter = false
+			break
+		}
+	}
+
+	// 如果没有找到有效的 frontmatter，返回错误
+	if frontmatterStart == -1 || frontmatterEnd == -1 {
+		return fmt.Errorf("文件没有有效的 frontmatter")
+	}
+
+	// 复制 frontmatter 开始之前的行（空）
+	result = append(result, lines[:frontmatterStart]...)
+	// 添加开始的 ---
+	result = append(result, lines[frontmatterStart])
+
+	// 处理 frontmatter 内部的行
+	nameFound := false
+	for i := frontmatterStart + 1; i < frontmatterEnd; i++ {
+		line := lines[i]
+		trimmed := strings.TrimSpace(line)
+
+		// 检查是否是 name 字段（顶层的，不是嵌套的）
+		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
+			parts := strings.SplitN(trimmed, ":", 2)
+			if len(parts) == 2 && strings.TrimSpace(parts[0]) == "name" {
+				// 替换 name 字段的值
+				result = append(result, "name: "+newName)
+				nameFound = true
+				continue
+			}
+		}
+
+		result = append(result, line)
+	}
+
+	// 如果没有找到 name 字段，在 frontmatter 开头添加
+	if !nameFound {
+		// 在 frontmatter 开始的 --- 后面插入 name 字段
+		temp := make([]string, 0, len(result)+1)
+		temp = append(temp, result[:frontmatterStart+1]...)
+		temp = append(temp, "name: "+newName)
+		temp = append(temp, result[frontmatterStart+1:]...)
+		result = temp
+	}
+
+	// 添加结束的 ---
+	result = append(result, lines[frontmatterEnd])
+	// 添加 frontmatter 之后的所有行
+	result = append(result, lines[frontmatterEnd+1:]...)
+
+	// 写入文件
+	return os.WriteFile(path, []byte(strings.Join(result, "\n")), 0644)
+}
+
 // validatePath 验证文件路径是否在允许的目录内
 func (e *Engine) validatePath(path string) error {
 	// 解析路径为绝对路径
@@ -162,6 +245,11 @@ func (e *Engine) validatePath(path string) error {
 func (e *Engine) CreateDocument(docType DocType, title string, content string, project string) (string, error) {
 	var path string
 
+	// 如果 title 为空，生成默认标题
+	if title == "" {
+		title = "new-" + strings.TrimSuffix(GenerateRandomName(), ".md")
+	}
+
 	switch docType {
 	case DocTypePlans:
 		// plans/ 目录下使用随机文件名
@@ -189,7 +277,9 @@ func (e *Engine) CreateDocument(docType DocType, title string, content string, p
 		if err := os.MkdirAll(memoryDir, 0755); err != nil {
 			return "", fmt.Errorf("failed to create memory directory: %w", err)
 		}
-		path = filepath.Join(memoryDir, title+".md")
+		// 使用标题生成文件名（kebab-case）
+		filename := strings.ToLower(strings.ReplaceAll(title, " ", "-")) + ".md"
+		path = filepath.Join(memoryDir, filename)
 	case DocTypeClaudeMD:
 		// CLAUDE.md 创建
 		var err error

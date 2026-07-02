@@ -542,6 +542,14 @@
     border-bottom: 1px solid var(--border);
 }
 
+/* Inline Meta Bar (merged with tabs row) */
+.session-meta-bar-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+}
+
 .meta-left,
 .meta-right {
     display: flex;

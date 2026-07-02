@@ -30,6 +30,12 @@ function renderKnowledgeDocList(docs) {
     const container = document.getElementById('knowledgeDocList');
     if (!container) return;
 
+    // 记忆模式下显示所有项目
+    if (currentKnowledgeType === 'memory') {
+        renderMemoryProjectList(docs);
+        return;
+    }
+
     if (!docs || docs.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -63,28 +69,7 @@ function renderKnowledgeDocList(docs) {
                     <span class="group-count">${projectDocs.length}</span>
                 </div>
                 <div class="group-items">
-                    ${projectDocs.map(doc => `
-                        <div class="knowledge-doc-item ${currentKnowledgeDoc?.path === doc.path ? 'active' : ''}"
-                             data-path="${escapeHtmlAttr(doc.path)}"
-                             onclick="selectKnowledgeDoc(this.dataset.path)">
-                            <div class="doc-icon">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    ${doc.type === 'plans'
-                                        ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'
-                                        : doc.type === 'claudemd'
-                                        ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'
-                                        : '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'}
-                                </svg>
-                            </div>
-                            <div class="doc-info">
-                                <div class="doc-title">${escapeHtml(doc.name)}</div>
-                                <div class="doc-meta">
-                                    <span class="doc-type">${doc.type === 'plans' ? 'Plan' : doc.type === 'claudemd' ? 'CLAUDE.md' : 'Memory'}</span>
-                                    <span class="doc-time">${formatKnowledgeTime(doc.updatedAt)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
+                    ${projectDocs.map(doc => renderDocItem(doc)).join('')}
                 </div>
             </div>
         `;
@@ -98,13 +83,115 @@ function renderKnowledgeDocList(docs) {
     });
 }
 
-// 格式化项目名称
+// 渲染单个文档项
+function renderDocItem(doc) {
+    return `
+        <div class="knowledge-doc-item ${currentKnowledgeDoc?.path === doc.path ? 'active' : ''}"
+             data-path="${escapeHtmlAttr(doc.path)}"
+             onclick="selectKnowledgeDoc(this.dataset.path)">
+            <div class="doc-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    ${doc.type === 'plans'
+                        ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'
+                        : doc.type === 'claudemd'
+                        ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'
+                        : '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'}
+                </svg>
+            </div>
+            <div class="doc-info">
+                <div class="doc-title">${escapeHtml(doc.name)}</div>
+                <div class="doc-meta">
+                    <span class="doc-type">${doc.type === 'plans' ? 'Plan' : doc.type === 'claudemd' ? 'CLAUDE.md' : 'Memory'}</span>
+                    <span class="doc-time">${formatKnowledgeTime(doc.updatedAt)}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 渲染记忆项目列表（显示所有项目）
+async function renderMemoryProjectList(docs) {
+    const container = document.getElementById('knowledgeDocList');
+    if (!container) return;
+
+    try {
+        const projects = await window.go.main.App.GetKnowledgeProjects();
+
+        if (!projects || projects.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>暂无项目</p>
+                </div>
+            `;
+            return;
+        }
+
+        // 按项目分组记忆文档
+        const memoryByProject = {};
+        docs.forEach(doc => {
+            if (!memoryByProject[doc.project]) {
+                memoryByProject[doc.project] = [];
+            }
+            memoryByProject[doc.project].push(doc);
+        });
+
+        // 渲染所有项目
+        let html = '';
+        projects.forEach(project => {
+            const projectDocs = memoryByProject[project] || [];
+            const displayName = formatProjectName(project);
+
+            html += `
+                <div class="knowledge-group">
+                    <div class="group-header" onclick="toggleKnowledgeGroup(this)">
+                        <svg class="group-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                        <span class="group-name">${escapeHtml(displayName)}</span>
+                        <span class="group-count">${projectDocs.length}</span>
+                        <button class="group-add-btn" onclick="event.stopPropagation(); createMemoryForProject('${escapeHtmlAttr(project)}')" title="新建记忆">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="group-items">
+                        ${projectDocs.length > 0
+                            ? projectDocs.map(doc => renderDocItem(doc)).join('')
+                            : '<div class="empty-project-hint">暂无记忆，点击 + 新建</div>'}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        // 默认折叠所有分组
+        container.querySelectorAll('.knowledge-group').forEach(group => {
+            group.classList.add('collapsed');
+        });
+    } catch (error) {
+        console.error('Failed to load projects:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>加载失败</p>
+            </div>
+        `;
+    }
+}
+
+// 格式化项目名称（与后端 formatProjectName 保持一致）
 function formatProjectName(dirName) {
     if (dirName === 'plans') return 'Plans';
-    // 将类似 "g--ltch-git-learn-agentscope-desktop" 转换为 "agentscope-desktop"
-    const parts = dirName.split('-').filter(p => p.length > 0);
+    // 去掉开头的连字符，过滤空字符串，取最后两个段
+    const name = dirName.replace(/^-/, '');
+    const parts = name.split('-').filter(p => p.length > 0);
     if (parts.length >= 2) {
         return parts.slice(-2).join('-');
+    }
+    if (parts.length === 1) {
+        return parts[0];
     }
     return dirName;
 }
@@ -274,7 +361,8 @@ function renderMarkdown(content) {
     // 按行处理 Markdown
     const lines = escaped.split('\n');
     let html = '';
-    let inList = false;
+    let inUnorderedList = false;
+    let inOrderedList = false;
     let inCodeBlock = false;
     let codeBlockContent = '';
 
@@ -298,44 +386,71 @@ function renderMarkdown(content) {
             continue;
         }
 
-        // 关闭列表
-        if (inList && !line.match(/^\s*[-*]\s/)) {
+        // 关闭无序列表
+        if (inUnorderedList && !line.match(/^\s*[-*]\s/)) {
             html += '</ul>';
-            inList = false;
+            inUnorderedList = false;
         }
 
-        // 处理标题
-        if (line.match(/^#### /)) {
-            html += `<h4>${line.substring(5)}</h4>`;
+        // 关闭有序列表
+        if (inOrderedList && !line.match(/^\s*\d+\.\s/)) {
+            html += '</ol>';
+            inOrderedList = false;
+        }
+
+        // 去除行首缩进后再匹配标题（支持缩进行的标题渲染）
+        const trimmedLine = line.replace(/^ {1,8}/, '');
+
+        // 处理标题（支持缩进）
+        if (trimmedLine.match(/^#### /)) {
+            html += `<h4>${trimmedLine.substring(5)}</h4>`;
             continue;
         }
-        if (line.match(/^### /)) {
-            html += `<h3>${line.substring(4)}</h3>`;
+        if (trimmedLine.match(/^### /)) {
+            html += `<h3>${trimmedLine.substring(4)}</h3>`;
             continue;
         }
-        if (line.match(/^## /)) {
-            html += `<h2>${line.substring(3)}</h2>`;
+        if (trimmedLine.match(/^## /)) {
+            html += `<h2>${trimmedLine.substring(3)}</h2>`;
             continue;
         }
-        if (line.match(/^# /)) {
-            html += `<h1>${line.substring(2)}</h1>`;
+        if (trimmedLine.match(/^# /)) {
+            html += `<h1>${trimmedLine.substring(2)}</h1>`;
             continue;
         }
 
         // 处理水平线
-        if (line.match(/^---+$/)) {
+        if (line.match(/^[\s]*-{3,}$/)) {
             html += '<hr>';
             continue;
         }
 
-        // 处理列表项
+        // 处理引用块
+        if (line.match(/^[\s]*&gt;\s?/)) {
+            const quoteContent = line.replace(/^[\s]*&gt;\s?/, '');
+            html += `<blockquote>${processInlineMarkdown(quoteContent)}</blockquote>`;
+            continue;
+        }
+
+        // 处理无序列表项
         if (line.match(/^\s*[-*]\s/)) {
-            if (!inList) {
+            if (!inUnorderedList) {
                 html += '<ul>';
-                inList = true;
+                inUnorderedList = true;
             }
-            const content = line.replace(/^\s*[-*]\s/, '');
-            html += `<li>${processInlineMarkdown(content)}</li>`;
+            const listContent = line.replace(/^\s*[-*]\s/, '');
+            html += `<li>${processInlineMarkdown(listContent)}</li>`;
+            continue;
+        }
+
+        // 处理有序列表项
+        if (line.match(/^\s*\d+\.\s/)) {
+            if (!inOrderedList) {
+                html += '<ol>';
+                inOrderedList = true;
+            }
+            const listContent = line.replace(/^\s*\d+\.\s/, '');
+            html += `<li>${processInlineMarkdown(listContent)}</li>`;
             continue;
         }
 
@@ -350,8 +465,11 @@ function renderMarkdown(content) {
     }
 
     // 关闭未关闭的列表
-    if (inList) {
+    if (inUnorderedList) {
         html += '</ul>';
+    }
+    if (inOrderedList) {
+        html += '</ol>';
     }
 
     return html;
@@ -448,6 +566,15 @@ function hideClaudeMDEditor() {
 }
 
 // ============================================
+// Refresh Documents
+// ============================================
+
+async function refreshKnowledge() {
+    await loadKnowledgeDocuments(currentKnowledgeType);
+    showToast(t('refreshed') || '已刷新');
+}
+
+// ============================================
 // Document Operations
 // ============================================
 
@@ -514,18 +641,123 @@ async function deleteKnowledgeDoc() {
 }
 
 async function createNewDocument() {
-    // 根据当前筛选类型决定创建什么文档
-    const docType = currentKnowledgeType === 'claudemd' ? 'claudemd' : 'plans';
-    const title = prompt(t('enterDocumentTitle') || '请输入文档标题:');
-    if (!title) return;
+    // 打开新建文档对话框
+    openCreateDocModal();
+}
+
+// ============================================
+// Create Document Modal
+// ============================================
+
+let selectedProject = '';
+
+async function openCreateDocModal() {
+    const modal = document.getElementById('createDocModal');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+    // 添加 show 类以触发动画
+    setTimeout(() => modal.classList.add('show'), 10);
+    selectedProject = '';
+
+    // 根据当前筛选类型设置默认文档类型
+    const memoryRadio = document.querySelector('input[name="docType"][value="memory"]');
+    const plansRadio = document.querySelector('input[name="docType"][value="plans"]');
+
+    if (currentKnowledgeType === 'plans') {
+        if (plansRadio) plansRadio.checked = true;
+    } else {
+        if (memoryRadio) memoryRadio.checked = true;
+    }
+
+    toggleProjectSelect();
+    await loadProjectSelectList();
+}
+
+function closeCreateDocModal() {
+    const modal = document.getElementById('createDocModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 200);
+    }
+    selectedProject = '';
+}
+
+function toggleProjectSelect() {
+    const docType = document.querySelector('input[name="docType"]:checked')?.value;
+    const projectGroup = document.getElementById('projectSelectGroup');
+    if (projectGroup) {
+        projectGroup.style.display = docType === 'memory' ? 'block' : 'none';
+    }
+}
+
+async function loadProjectSelectList() {
+    const container = document.getElementById('projectSelectList');
+    if (!container) return;
 
     try {
-        const path = await window.go.main.App.CreateKnowledgeDocument(docType, title, '', '');
+        const projects = await window.go.main.App.GetKnowledgeProjects();
+        if (!projects || projects.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>暂无项目</p></div>';
+            return;
+        }
+
+        container.innerHTML = projects.map(p => `
+            <div class="project-select-item" data-project="${escapeHtmlAttr(p)}" onclick="selectProjectItem(this)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span>${escapeHtml(formatProjectName(p))}</span>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Failed to load projects:', error);
+        container.innerHTML = '<div class="empty-state"><p>加载失败</p></div>';
+    }
+}
+
+function selectProjectItem(item) {
+    document.querySelectorAll('.project-select-item').forEach(el => el.classList.remove('active'));
+    item.classList.add('active');
+    selectedProject = item.dataset.project;
+}
+
+async function confirmCreateDoc() {
+    const docType = document.querySelector('input[name="docType"]:checked')?.value;
+    if (!docType) {
+        showToast('请选择文档类型');
+        return;
+    }
+
+    if (docType === 'memory' && !selectedProject) {
+        showToast('请选择项目');
+        return;
+    }
+
+    try {
+        const path = await window.go.main.App.CreateKnowledgeDocument(docType, '', '', selectedProject);
+        closeCreateDocModal();
         await loadKnowledgeDocuments(currentKnowledgeType);
         await selectKnowledgeDoc(path);
         if (docType !== 'claudemd') {
             toggleKnowledgeEdit();
         }
+    } catch (error) {
+        console.error('Failed to create document:', error);
+        showToast(t('createFailed') || '创建失败');
+    }
+}
+
+// 为指定项目创建记忆
+async function createMemoryForProject(project) {
+    selectedProject = project;
+    const docType = 'memory';
+
+    try {
+        const path = await window.go.main.App.CreateKnowledgeDocument(docType, '', '', project);
+        await loadKnowledgeDocuments(currentKnowledgeType);
+        await selectKnowledgeDoc(path);
+        toggleKnowledgeEdit();
     } catch (error) {
         console.error('Failed to create document:', error);
         showToast(t('createFailed') || '创建失败');
@@ -592,3 +824,102 @@ function formatKnowledgeTime(timeStr) {
     // 超过 7 天，显示日期
     return date.toLocaleDateString();
 }
+
+// ============================================
+// Rename Document
+// ============================================
+
+function startRenameDoc() {
+    if (!currentKnowledgeDoc) return;
+
+    const docName = document.getElementById('knowledgeDocName');
+    const docNameInput = document.getElementById('knowledgeDocNameInput');
+
+    if (docName && docNameInput) {
+        docName.style.display = 'none';
+        docNameInput.style.display = 'block';
+        docNameInput.value = currentKnowledgeDoc.name;
+        docNameInput.focus();
+        docNameInput.select();
+    }
+}
+
+async function finishRenameDoc() {
+    const docName = document.getElementById('knowledgeDocName');
+    const docNameInput = document.getElementById('knowledgeDocNameInput');
+
+    if (!docName || !docNameInput || !currentKnowledgeDoc) return;
+
+    const newName = docNameInput.value.trim();
+    if (newName && newName !== currentKnowledgeDoc.name) {
+        try {
+            await window.go.main.App.RenameKnowledgeDocument(currentKnowledgeDoc.path, newName);
+            currentKnowledgeDoc.name = newName;
+            docName.textContent = newName;
+            // 刷新文档列表
+            await loadKnowledgeDocuments(currentKnowledgeType);
+            showToast('名称已修改');
+        } catch (error) {
+            console.error('Failed to rename document:', error);
+            showToast(t('renameFailed') || '重命名失败');
+        }
+    }
+
+    docName.style.display = 'block';
+    docNameInput.style.display = 'none';
+}
+
+function handleRenameKeydown(event) {
+    if (event.key === 'Enter') {
+        event.target.blur();
+    } else if (event.key === 'Escape') {
+        const docName = document.getElementById('knowledgeDocName');
+        const docNameInput = document.getElementById('knowledgeDocNameInput');
+        if (docName && docNameInput) {
+            docNameInput.value = currentKnowledgeDoc?.name || '';
+            docName.style.display = 'block';
+            docNameInput.style.display = 'none';
+        }
+    }
+}
+
+// ============================================
+// Knowledge Sidebar Resizer
+// ============================================
+
+(function() {
+    const resizer = document.getElementById('knowledgeResizer');
+    const sidebar = document.querySelector('.knowledge-sidebar');
+
+    if (!resizer || !sidebar) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = sidebar.offsetWidth;
+        resizer.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const diff = e.clientX - startX;
+        const newWidth = Math.min(Math.max(startWidth + diff, 200), 500);
+        sidebar.style.width = newWidth + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!isResizing) return;
+
+        isResizing = false;
+        resizer.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    });
+})();

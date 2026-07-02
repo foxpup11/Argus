@@ -3,6 +3,7 @@ package settings
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -66,7 +67,13 @@ func NewManager() (*Manager, error) {
 	}
 
 	// 加载已有的设置
-	m.load()
+	if err := m.load(); err != nil {
+		// 如果文件不存在，使用默认设置
+		// 对于其他错误（如文件损坏），记录日志并使用默认设置
+		if !os.IsNotExist(err) {
+			log.Printf("WARN: 加载设置失败: %v，使用默认设置", err)
+		}
+	}
 
 	return m, nil
 }
