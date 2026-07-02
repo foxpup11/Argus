@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Go-1.23+-00ADD8?style=for-the-badge&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/Wails-v2-5C2D91?style=for-the-badge" alt="Wails">
   <img src="https://img.shields.io/badge/Platform-Windows-lightgrey?style=for-the-badge" alt="Platform">
-  <img src="https://img.shields.io/badge/Version-v0.5.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v0.5.1-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
 </p>
 
@@ -215,17 +215,18 @@ AgentScope 运行在 Claude Code **外部**，这意味着：
 
 ## 预览
 
-docs/images/preview0.png
+(docs/images/preview0.png)
 
-docs/images/preview1.png
+(docs/images/preview1.png)
 
-docs/images/preview2.png
+(docs/images/preview2.png)
 
-docs/images/preview3.png
+(docs/images/preview3.png)
 
-docs/images/preview4.png
+(docs/images/preview4.png)
 
-docs/images/preview5.png
+(docs/images/preview5.png)
+
 ---
 
 ## 快速上手
