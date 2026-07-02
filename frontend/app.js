@@ -5,7 +5,7 @@
 // ============================================
 let currentSessionId = null;
 let currentDiffMode = 'uncommitted';
-let currentTab = 'dashboard'; // 'dashboard' | 'sessions' | 'knowledge'
+let currentTab = 'dashboard'; // 'dashboard' | 'sessions' | 'knowledge' | 'continuity'
 let sessions = [];
 let sessionsLoaded = false;
 
@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initI18n();
     initMonitoring();
     initTheme();
+    initContinuity();
 
     // Default to dashboard tab
     switchTab('dashboard');
@@ -47,6 +48,7 @@ function switchTab(tab) {
     document.getElementById('dashboardPanel').classList.toggle('active', tab === 'dashboard');
     document.getElementById('sessionsPanel').classList.toggle('active', tab === 'sessions');
     document.getElementById('knowledgePanel').classList.toggle('active', tab === 'knowledge');
+    document.getElementById('continuityPanel').classList.toggle('active', tab === 'continuity');
 
     // Load data for the selected tab
     if (tab === 'dashboard') {
@@ -56,6 +58,8 @@ function switchTab(tab) {
         sessionsLoaded = true;
     } else if (tab === 'knowledge') {
         loadKnowledgeDocuments();
+    } else if (tab === 'continuity') {
+        initContinuity();
     }
 }
 
@@ -704,10 +708,15 @@ async function applyAdvancedSearch() {
 
     // 收集搜索字段
     const fields = [];
-    if (document.getElementById('searchPrompt').checked) fields.push('prompt');
-    if (document.getElementById('searchModel').checked) fields.push('model');
-    if (document.getElementById('searchBranch').checked) fields.push('branch');
-    if (document.getElementById('searchTags').checked) fields.push('tags');
+    const searchPrompt = document.getElementById('searchPrompt');
+    const searchModel = document.getElementById('searchModel');
+    const searchBranch = document.getElementById('searchBranch');
+    const searchTags = document.getElementById('searchTags');
+
+    if (searchPrompt && searchPrompt.checked) fields.push('prompt');
+    if (searchModel && searchModel.checked) fields.push('model');
+    if (searchBranch && searchBranch.checked) fields.push('branch');
+    if (searchTags && searchTags.checked) fields.push('tags');
 
     // 收集标签筛选
     const tags = [];
@@ -717,7 +726,7 @@ async function applyAdvancedSearch() {
 
     // 收藏筛选
     const favoritedCheckbox = document.getElementById('filterFavorited');
-    const favorited = favoritedCheckbox.checked ? true : null;
+    const favorited = favoritedCheckbox && favoritedCheckbox.checked ? true : null;
 
     try {
         const results = await window.go.main.App.SearchSessions(keyword, fields, tags, favorited);
@@ -886,6 +895,7 @@ async function selectSessionWithMeta(sessionId) {
 
         // 显示元数据栏
         document.getElementById('sessionMetaBar').style.display = 'flex';
+        document.getElementById('sessionNoteBtn').style.display = 'flex';
 
         // 加载对话记录
         await loadConversation(sessionId);

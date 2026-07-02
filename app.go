@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"agentscope-desktop/internal/analytics"
+	"agentscope-desktop/internal/continuity"
 	"agentscope-desktop/internal/diff"
 	"agentscope-desktop/internal/export"
 	"agentscope-desktop/internal/knowledge"
@@ -31,6 +32,7 @@ type App struct {
 	analytics   *analytics.Engine
 	metaStore   *session.MetaStore
 	knowledge   *knowledge.Engine
+	continuity  *continuity.Engine
 }
 
 // SessionInfo 会话简要信息（用于列表展示）
@@ -138,6 +140,14 @@ func (a *App) startup(ctx context.Context) {
 	} else {
 		a.knowledge = knowledgeEngine
 	}
+
+	// 初始化会话连续性引擎
+	continuityEngine, err := continuity.NewEngine()
+	if err != nil {
+		log.Printf("WARN: 会话连续性引擎初始化失败: %v", err)
+	} else {
+		a.continuity = continuityEngine
+	}
 }
 
 // GetSessions 获取所有会话列表
@@ -203,19 +213,57 @@ func formatProjectName(dirName string) string {
 	// 去掉开头的连字符
 	name := strings.TrimPrefix(dirName, "-")
 
-	// 取最后一个路径段作为项目名
+	// 过滤空字符串并取最后两个段
 	parts := strings.Split(name, "-")
-	if len(parts) > 0 {
-		// 尝试找到有意义的项目名（通常是最后几个段）
-		// 对于类似 "g-ltch-git-learn-agentscope-desktop" 的格式
-		// 取最后两个段组合
-		if len(parts) >= 2 {
-			return parts[len(parts)-2] + "-" + parts[len(parts)-1]
+	var filtered []string
+	for _, p := range parts {
+		if p != "" {
+			filtered = append(filtered, p)
 		}
-		return parts[len(parts)-1]
+	}
+
+	if len(filtered) >= 2 {
+		return filtered[len(filtered)-2] + "-" + filtered[len(filtered)-1]
+	}
+	if len(filtered) == 1 {
+		return filtered[0]
 	}
 
 	return name
+}
+
+// GetAllProjectDirs 获取所有有会话的项目目录名（共享逻辑，与会话列表保持一致）
+func GetAllProjectDirs() ([]string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	claudeDir := filepath.Join(homeDir, ".claude", "projects")
+	if _, err := os.Stat(claudeDir); os.IsNotExist(err) {
+		return []string{}, nil
+	}
+
+	entries, err := os.ReadDir(claudeDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var projects []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		// 只返回有会话文件的项目（与 GetSessions 保持一致）
+		projectDir := filepath.Join(claudeDir, entry.Name())
+		jsonlFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		if len(jsonlFiles) > 0 {
+			projects = append(projects, entry.Name())
+		}
+	}
+
+	return projects, nil
 }
 
 // GetSession 获取单个会话详情
@@ -260,28 +308,35 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 
 	// 从 actions 中提取文件改动
 	fileChangesMap := make(map[string]*session.FileChange)
+	// 跟踪每个文件是否有 Write action
+	fileHasWrite := make(map[string]bool)
 	for _, action := range sess.Actions {
 		if action.FilePath == "" {
 			continue
 		}
 
+		// 记录是否有 Write action
+		if action.Type == session.ActionWrite {
+			fileHasWrite[action.FilePath] = true
+		}
+
 		fc, exists := fileChangesMap[action.FilePath]
 		if !exists {
-			// 确定变更类型
-			changeType := session.ChangeModified
-			// 简单判断：如果 action 是 Write 且是第一个，可能是新建
-			if action.Type == session.ActionWrite {
-				changeType = session.ChangeCreated
-			}
-
 			fc = &session.FileChange{
 				Path:       action.FilePath,
-				ChangeType: changeType,
+				ChangeType: session.ChangeModified,
 				Actions:    []session.Action{action},
 			}
 			fileChangesMap[action.FilePath] = fc
 		} else {
 			fc.Actions = append(fc.Actions, action)
+		}
+	}
+
+	// 根据是否有 Write action 确定 ChangeType
+	for filePath, fc := range fileChangesMap {
+		if fileHasWrite[filePath] {
+			fc.ChangeType = session.ChangeCreated
 		}
 	}
 
@@ -1205,6 +1260,11 @@ func (a *App) GetKnowledgeDocument(path string) (*KnowledgeDocInfo, error) {
 	}, nil
 }
 
+// GetKnowledgeProjects 获取所有项目列表（使用共享逻辑）
+func (a *App) GetKnowledgeProjects() ([]string, error) {
+	return GetAllProjectDirs()
+}
+
 // SaveKnowledgeDocument 保存知识文档
 func (a *App) SaveKnowledgeDocument(path string, content string) error {
 	if a.knowledge == nil {
@@ -1223,15 +1283,24 @@ func (a *App) DeleteKnowledgeDocument(path string) error {
 	return a.knowledge.DeleteDocument(path)
 }
 
+// RenameKnowledgeDocument 重命名知识文档
+func (a *App) RenameKnowledgeDocument(path string, newName string) error {
+	if a.knowledge == nil {
+		return fmt.Errorf("知识管理引擎未初始化")
+	}
+
+	return a.knowledge.RenameDocument(path, newName)
+}
+
 // CreateKnowledgeDocument 创建知识文档
 func (a *App) CreateKnowledgeDocument(docType string, title string, content string, project string) (string, error) {
 	if a.knowledge == nil {
 		return "", fmt.Errorf("知识管理引擎未初始化")
 	}
 
-	// 验证标题
+	// 如果标题为空，让知识引擎自动生成默认标题
 	if title == "" {
-		return "", fmt.Errorf("title cannot be empty")
+		return a.knowledge.CreateDocument(knowledge.DocType(docType), title, content, project)
 	}
 
 	// 清理标题中的特殊字符（只允许字母、数字、空格、连字符、下划线）
@@ -1445,4 +1514,185 @@ func (a *App) BatchUpdateCLAUDEMD(updates []CLAUDEMDBatchUpdate) (*BatchCLAUDEMD
 	}
 
 	return result, nil
+}
+
+// ============================================
+// Session Continuity API
+// ============================================
+
+// ContinuityProjectInfo 项目信息（前端展示用）
+type ContinuityProjectInfo struct {
+	Name         string    `json:"name"`
+	DirName      string    `json:"dirName"`
+	SessionCount int       `json:"sessionCount"`
+	LastActivity time.Time `json:"lastActivity"`
+}
+
+// ContinuityTaskInfo 任务信息（前端展示用）
+type ContinuityTaskInfo struct {
+	Description   string    `json:"description"`
+	SessionID     string    `json:"sessionId"`
+	FilesChanged  []string  `json:"filesChanged"`
+	VerifiedByGit bool      `json:"verifiedByGit"`
+	Timestamp     time.Time `json:"timestamp"`
+}
+
+// ContinuityPendingTaskInfo 待办任务信息
+type ContinuityPendingTaskInfo struct {
+	Description string   `json:"description"`
+	Source      string   `json:"source"`
+	SessionID   string   `json:"sessionId"`
+	FilesHint   []string `json:"filesHint"`
+}
+
+// ContinuityDecisionInfo 决策信息
+type ContinuityDecisionInfo struct {
+	Description string    `json:"description"`
+	Context     string    `json:"context"`
+	Timestamp   time.Time `json:"timestamp"`
+	SessionID   string    `json:"sessionId"`
+}
+
+// ContinuityFileInfo 文件信息
+type ContinuityFileInfo struct {
+	Path         string `json:"path"`
+	ChangeCount  int    `json:"changeCount"`
+	ActionCount  int    `json:"actionCount"`
+	LastAction   string `json:"lastAction"`
+	IsTestFile   bool   `json:"isTestFile"`
+	IsConfigFile bool   `json:"isConfigFile"`
+}
+
+// ContinuitySummary 完整的交接摘要（前端展示用）
+type ContinuitySummary struct {
+	Project        string                      `json:"project"`
+	SessionsUsed   int                         `json:"sessionsUsed"`
+	SessionsTotal  int                         `json:"sessionsTotal"`
+	CompletedTasks []ContinuityTaskInfo        `json:"completedTasks"`
+	PendingTasks   []ContinuityPendingTaskInfo `json:"pendingTasks"`
+	KeyDecisions   []ContinuityDecisionInfo    `json:"keyDecisions"`
+	ModifiedFiles  []ContinuityFileInfo        `json:"modifiedFiles"`
+	KnownIssues    []string                    `json:"knownIssues"`
+	GeneratedAt    time.Time                   `json:"generatedAt"`
+}
+
+// GetContinuityProjects 获取所有有会话的项目列表
+func (a *App) GetContinuityProjects() ([]ContinuityProjectInfo, error) {
+	if a.continuity == nil {
+		return nil, fmt.Errorf("会话连续性引擎未初始化")
+	}
+
+	projects, err := a.continuity.GetAvailableProjects()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]ContinuityProjectInfo, len(projects))
+	for i, p := range projects {
+		result[i] = ContinuityProjectInfo{
+			Name:         p.Name,
+			DirName:      p.DirName,
+			SessionCount: p.SessionCount,
+			LastActivity: p.LastActivity,
+		}
+	}
+
+	return result, nil
+}
+
+// GenerateContinuityHandoff 生成会话交接摘要
+func (a *App) GenerateContinuityHandoff(project string, sessionCount int) (*ContinuitySummary, error) {
+	if a.continuity == nil {
+		return nil, fmt.Errorf("会话连续性引擎未初始化")
+	}
+
+	summary, err := a.continuity.GenerateHandoff(project, sessionCount)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换为前端格式
+	completedTasks := make([]ContinuityTaskInfo, len(summary.CompletedTasks))
+	for i, t := range summary.CompletedTasks {
+		completedTasks[i] = ContinuityTaskInfo{
+			Description:   t.Description,
+			SessionID:     t.SessionID,
+			FilesChanged:  t.FilesChanged,
+			VerifiedByGit: t.VerifiedByGit,
+			Timestamp:     t.Timestamp,
+		}
+	}
+
+	pendingTasks := make([]ContinuityPendingTaskInfo, len(summary.PendingTasks))
+	for i, t := range summary.PendingTasks {
+		pendingTasks[i] = ContinuityPendingTaskInfo{
+			Description: t.Description,
+			Source:      t.Source,
+			SessionID:   t.SessionID,
+			FilesHint:   t.FilesHint,
+		}
+	}
+
+	keyDecisions := make([]ContinuityDecisionInfo, len(summary.KeyDecisions))
+	for i, d := range summary.KeyDecisions {
+		keyDecisions[i] = ContinuityDecisionInfo{
+			Description: d.Description,
+			Context:     d.Context,
+			Timestamp:   d.Timestamp,
+			SessionID:   d.SessionID,
+		}
+	}
+
+	modifiedFiles := make([]ContinuityFileInfo, len(summary.ModifiedFiles))
+	for i, f := range summary.ModifiedFiles {
+		modifiedFiles[i] = ContinuityFileInfo{
+			Path:         f.Path,
+			ChangeCount:  f.ChangeCount,
+			ActionCount:  f.ActionCount,
+			LastAction:   f.LastAction,
+			IsTestFile:   f.IsTestFile,
+			IsConfigFile: f.IsConfigFile,
+		}
+	}
+
+	return &ContinuitySummary{
+		Project:        summary.Project,
+		SessionsUsed:   summary.SessionsUsed,
+		SessionsTotal:  summary.SessionsTotal,
+		CompletedTasks: completedTasks,
+		PendingTasks:   pendingTasks,
+		KeyDecisions:   keyDecisions,
+		ModifiedFiles:  modifiedFiles,
+		KnownIssues:    summary.KnownIssues,
+		GeneratedAt:    summary.GeneratedAt,
+	}, nil
+}
+
+// ExportContinuityToMemory 导出交接摘要到 memory 目录
+func (a *App) ExportContinuityToMemory(project string, sessionCount int) (string, error) {
+	if a.continuity == nil {
+		return "", fmt.Errorf("会话连续性引擎未初始化")
+	}
+
+	return a.continuity.ExportToMemory(project, sessionCount)
+}
+
+// GenerateContinuityMarkdown 生成 Markdown 格式的交接摘要
+func (a *App) GenerateContinuityMarkdown(project string, sessionCount int) (string, error) {
+	if a.continuity == nil {
+		return "", fmt.Errorf("会话连续性引擎未初始化")
+	}
+
+	markdown, _, err := a.continuity.GenerateHandoffMarkdown(project, sessionCount)
+	return markdown, err
+}
+
+// GenerateContinuityPrompt 生成可粘贴的 prompt 片段
+func (a *App) GenerateContinuityPrompt(project string, sessionCount int) (string, error) {
+	if a.continuity == nil {
+		return "", fmt.Errorf("会话连续性引擎未初始化")
+	}
+
+	prompt, _, err := a.continuity.GenerateHandoffPrompt(project, sessionCount)
+	return prompt, err
 }

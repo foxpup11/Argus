@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="./knowledge.css">
     <link rel="stylesheet" href="./claudemd-editor.css">
     <link rel="stylesheet" href="./conversation.css">
+    <link rel="stylesheet" href="./continuity.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -42,6 +43,15 @@
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                     </svg>
                     <span data-i18n="knowledgeTab">知识库</span>
+                </button>
+                <button class="nav-tab" data-tab="continuity" onclick="switchTab('continuity')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span data-i18n="continuityTab">会话连续性</span>
                 </button>
             </nav>
             <div class="header-actions">
@@ -344,9 +354,10 @@
 
                 <!-- Content -->
                 <section class="content">
-                    <!-- Session Meta Bar -->
-                    <div id="sessionMetaBar" class="session-meta-bar" style="display: none;">
-                        <div class="meta-left">
+                    <!-- Tab Navigation -->
+                    <div class="session-tabs">
+                        <!-- Session Meta Actions (left) -->
+                        <div id="sessionMetaBar" class="session-meta-bar-inline" style="display: none;">
                             <button id="favoriteBtn" class="btn-icon" onclick="toggleFavorite()" title="收藏/取消收藏">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -362,18 +373,8 @@
                                 </svg>
                             </button>
                         </div>
-                        <div class="meta-right">
-                            <button class="btn-icon" onclick="showNoteDialog()" title="添加备注">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
 
-                    <!-- Tab Navigation -->
-                    <div class="session-tabs">
+                        <!-- Tab buttons -->
                         <button class="session-tab active" data-tab="conversation" onclick="switchSessionTab('conversation')">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -389,6 +390,16 @@
                             <span data-i18n="fileChanges">文件改动</span>
                             <span id="filesTabCount" class="tab-count">0</span>
                         </button>
+
+                        <!-- Edit Note Button (right) -->
+                        <div id="sessionNoteBtn" class="session-meta-bar-inline" style="display: none; margin-left: auto;">
+                            <button class="btn-icon" onclick="showNoteDialog()" title="添加备注">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Tab Content: Conversation -->
@@ -471,13 +482,21 @@
                 <aside class="knowledge-sidebar">
                     <div class="sidebar-header">
                         <h3 data-i18n="knowledge">知识库</h3>
-                        <button class="btn btn-sm" onclick="createNewDocument()">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"/>
-                                <line x1="5" y1="12" x2="19" y2="12"/>
-                            </svg>
-                            <span data-i18n="newDocument">新建</span>
-                        </button>
+                        <div class="sidebar-actions">
+                            <button class="btn btn-sm" onclick="refreshKnowledge()" title="刷新">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 4v6h-6M1 20v-6h6"/>
+                                    <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                                </svg>
+                            </button>
+                            <button class="btn btn-sm" onclick="createNewDocument()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                                <span data-i18n="newDocument">新建</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- 搜索框 -->
@@ -523,12 +542,16 @@
                     </div>
                 </aside>
 
+                <!-- 侧边栏调整手柄 -->
+                <div id="knowledgeResizer" class="resizer"></div>
+
                 <!-- 主内容区：编辑器/预览 -->
                 <main class="knowledge-main">
                     <!-- 工具栏 -->
                     <div class="knowledge-toolbar">
                         <div class="toolbar-left">
-                            <span id="knowledgeDocName" class="doc-name" data-i18n="selectDocument">选择文档查看</span>
+                            <span id="knowledgeDocName" class="doc-name" onclick="startRenameDoc()" title="点击修改名称" style="cursor: pointer;">选择文档查看</span>
+                            <input id="knowledgeDocNameInput" class="doc-name-input" type="text" style="display: none;" onblur="finishRenameDoc()" onkeydown="handleRenameKeydown(event)">
                             <span id="knowledgeDocType" class="doc-type-badge"></span>
                         </div>
                         <div class="toolbar-right">
@@ -597,6 +620,130 @@
                         </div>
                     </div>
                 </main>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- TAB: Continuity (会话连续性)                  -->
+        <!-- ============================================ -->
+        <div id="continuityPanel" class="continuity-panel">
+            <div class="continuity-layout">
+                <!-- 左侧控制面板 -->
+                <aside class="continuity-controls">
+                    <h3 data-i18n="continuitySettings">连续性设置</h3>
+
+                    <!-- 项目选择 -->
+                    <div>
+                        <label style="font-size: 13px; color: var(--text-secondary, #6b7280); display: block; margin-bottom: 4px;" data-i18n="selectProject">选择项目</label>
+                        <select id="continuityProjectSelect" class="project-select" onchange="onContinuityProjectChange(this.value)">
+                            <option value="">{loading}</option>
+                        </select>
+                    </div>
+
+                    <!-- 会话数量 -->
+                    <div>
+                        <label style="font-size: 13px; color: var(--text-secondary, #6b7280); display: block; margin-bottom: 4px;" data-i18n="sessionCount">分析会话数</label>
+                        <input type="number" id="continuitySessionCount" class="session-count-input" value="10" min="1" max="100" style="width: 100%;">
+                    </div>
+
+                    <!-- 生成按钮 -->
+                    <button class="btn-generate" onclick="generateContinuityHandoff()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                        <span data-i18n="generateHandoff">生成交接摘要</span>
+                    </button>
+
+                    <!-- 导出按钮 -->
+                    <div class="export-buttons">
+                        <button class="btn-export" onclick="exportContinuityToMemory()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                <polyline points="17 21 17 13 7 13 7 21"/>
+                                <polyline points="7 3 7 8 15 8"/>
+                            </svg>
+                            <span data-i18n="exportToMemory">导出到 Memory</span>
+                        </button>
+                        <button class="btn-export" onclick="generateContinuityMarkdown()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            <span data-i18n="viewMarkdown">查看 Markdown</span>
+                        </button>
+                        <button class="btn-export" onclick="generateContinuityPrompt()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                            <span data-i18n="copyPrompt">复制 Prompt</span>
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- 右侧内容区域 -->
+                <main id="continuityContent" class="continuity-content">
+                    <div class="continuity-empty">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        <h3 data-i18n="continuityEmpty">会话连续性引擎</h3>
+                        <p data-i18n="continuityEmptyDesc">选择项目并点击"生成交接摘要"来分析最近的会话</p>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- Create Document Modal -->
+        <div id="createDocModal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h2>新建知识库文档</h2>
+                    <button class="modal-close" onclick="closeCreateDocModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">文档类型</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="docType" value="memory" checked onchange="toggleProjectSelect()">
+                                <span class="radio-text">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                                    </svg>
+                                    记忆 (Memory)
+                                </span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="docType" value="plans" onchange="toggleProjectSelect()">
+                                <span class="radio-text">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    计划 (Plan)
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="projectSelectGroup" class="form-group">
+                        <label class="form-label">选择项目</label>
+                        <div id="projectSelectList" class="project-select-list">
+                            <div class="empty-state"><p>加载中...</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="closeCreateDocModal()">取消</button>
+                    <button class="btn btn-primary" onclick="confirmCreateDoc()">创建</button>
+                </div>
             </div>
         </div>
 
@@ -722,6 +869,7 @@
     <script src="./claudemd-editor.js"></script>
     <script src="./claudemd-generator.js"></script>
     <script src="./conversation.js"></script>
+    <script src="./continuity.js"></script>
     <script src="./resizer.js"></script>
 </body>
 </html>

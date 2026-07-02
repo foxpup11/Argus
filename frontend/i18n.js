@@ -9,6 +9,7 @@ const i18n = {
         // Tab 导航
         dashboard: 'Token 概览',
         sessionsTab: '会话管理',
+        continuityTab: '会话连续性',
 
         // 监控状态
         monitoringActive: '实时监控已开启',
@@ -24,6 +25,7 @@ const i18n = {
         exportSuccess: '导出成功',
         exportFailed: '导出失败',
         selectSessionFirst: '请先选择一个会话',
+        refreshed: '已刷新',
 
         // 侧边栏
         sessions: '会话',
@@ -216,6 +218,40 @@ const i18n = {
         features: '特性',
         noProjects: '未找到项目',
         cancel: '取消',
+
+        // 会话连续性
+        continuityTab: '会话连续性',
+        continuitySettings: '连续性设置',
+        sessionCount: '分析会话数',
+        generateHandoff: '生成交接摘要',
+        generating: '正在生成交接摘要...',
+        exportToMemory: '导出到 Memory',
+        viewMarkdown: '查看 Markdown',
+        copyPrompt: '复制 Prompt',
+        continuityEmpty: '会话连续性引擎',
+        continuityEmptyDesc: '选择项目并点击"生成交接摘要"来分析最近的会话',
+        handoffTitle: '会话交接摘要',
+        completedTasks: '已完成任务',
+        pendingTasks: '待办事项',
+        keyDecisions: '关键决策',
+        modifiedFiles: '修改的文件',
+        knownIssues: '已知问题/陷阱',
+        completed: '已完成',
+        pending: '待办',
+        decisions: '决策',
+        changeCount: '操作次数',
+        lastAction: '最后操作',
+        fileType: '类型',
+        code: '代码',
+        test: '测试',
+        config: '配置',
+        noDataFound: '未找到有效数据',
+        tryMoreSessions: '尝试增加分析的会话数量',
+        markdownPreview: 'Markdown 预览',
+        copiedToClipboard: '已复制到剪贴板',
+        back: '返回',
+        selectProjectFirst: '请先选择项目',
+        generateFailed: '生成失败',
     },
     en: {
         // Header
@@ -226,6 +262,7 @@ const i18n = {
         // Tab Navigation
         dashboard: 'Token Overview',
         sessionsTab: 'Sessions',
+        continuityTab: 'Continuity',
 
         // Monitoring Status
         monitoringActive: 'Real-time monitoring active',
@@ -241,6 +278,7 @@ const i18n = {
         exportSuccess: 'Export successful',
         exportFailed: 'Export failed',
         selectSessionFirst: 'Please select a session first',
+        refreshed: 'Refreshed',
 
         // Sidebar
         sessions: 'Sessions',
@@ -432,6 +470,40 @@ const i18n = {
         buildTool: 'Build Tool',
         features: 'Features',
         noProjects: 'No projects found',
+
+        // Continuity
+        continuityTab: 'Continuity',
+        continuitySettings: 'Continuity Settings',
+        sessionCount: 'Sessions to Analyze',
+        generateHandoff: 'Generate Handoff',
+        generating: 'Generating handoff summary...',
+        exportToMemory: 'Export to Memory',
+        viewMarkdown: 'View Markdown',
+        copyPrompt: 'Copy Prompt',
+        continuityEmpty: 'Session Continuity Engine',
+        continuityEmptyDesc: 'Select a project and click "Generate Handoff" to analyze recent sessions',
+        handoffTitle: 'Session Handoff Summary',
+        completedTasks: 'Completed Tasks',
+        pendingTasks: 'Pending Tasks',
+        keyDecisions: 'Key Decisions',
+        modifiedFiles: 'Modified Files',
+        knownIssues: 'Known Issues / Pitfalls',
+        completed: 'Completed',
+        pending: 'Pending',
+        decisions: 'Decisions',
+        changeCount: 'Changes',
+        lastAction: 'Last Action',
+        fileType: 'Type',
+        code: 'Code',
+        test: 'Test',
+        config: 'Config',
+        noDataFound: 'No valid data found',
+        tryMoreSessions: 'Try increasing the number of sessions to analyze',
+        markdownPreview: 'Markdown Preview',
+        copiedToClipboard: 'Copied to clipboard',
+        back: 'Back',
+        selectProjectFirst: 'Please select a project first',
+        generateFailed: 'Generation failed',
     }
 };
 
