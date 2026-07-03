@@ -972,7 +972,10 @@ async function finishRenameDoc() {
     const newName = docNameInput.value.trim();
     if (newName && newName !== currentKnowledgeDoc.name) {
         try {
-            await window.go.main.App.RenameKnowledgeDocument(currentKnowledgeDoc.path, newName);
+            // 获取新的文件路径
+            const newPath = await window.go.main.App.RenameKnowledgeDocument(currentKnowledgeDoc.path, newName);
+            // 更新当前文档的路径和名称
+            currentKnowledgeDoc.path = newPath;
             currentKnowledgeDoc.name = newName;
             docName.textContent = newName;
             // 刷新文档列表

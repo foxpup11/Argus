@@ -132,17 +132,18 @@ func (e *Engine) DeleteDocument(path string) error {
 	return os.Remove(path)
 }
 
-// RenameDocument 重命名文档（更新 frontmatter 中的 name 字段）
-func (e *Engine) RenameDocument(path string, newName string) error {
+// RenameDocument 重命名文档（更新 frontmatter 中的 name 字段，并重命名磁盘上的文件）
+// 返回新的文件路径
+func (e *Engine) RenameDocument(path string, newName string) (string, error) {
 	// 验证路径安全性
 	if err := e.validatePath(path); err != nil {
-		return err
+		return "", err
 	}
 
 	// 读取文件内容
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// 按行处理，精确替换 frontmatter 中的 name 字段
@@ -168,7 +169,7 @@ func (e *Engine) RenameDocument(path string, newName string) error {
 
 	// 如果没有找到有效的 frontmatter，返回错误
 	if frontmatterStart == -1 || frontmatterEnd == -1 {
-		return fmt.Errorf("文件没有有效的 frontmatter")
+		return "", fmt.Errorf("文件没有有效的 frontmatter")
 	}
 
 	// 复制 frontmatter 开始之前的行（空）
@@ -211,8 +212,32 @@ func (e *Engine) RenameDocument(path string, newName string) error {
 	// 添加 frontmatter 之后的所有行
 	result = append(result, lines[frontmatterEnd+1:]...)
 
-	// 写入文件
-	return os.WriteFile(path, []byte(strings.Join(result, "\n")), 0644)
+	// 写入文件内容（更新 frontmatter）
+	if err := os.WriteFile(path, []byte(strings.Join(result, "\n")), 0644); err != nil {
+		return "", fmt.Errorf("更新文件内容失败: %w", err)
+	}
+
+	// 生成新的文件名（基于 newName，使用 kebab-case 格式）
+	newFilename := strings.ToLower(strings.ReplaceAll(newName, " ", "-")) + ".md"
+	dir := filepath.Dir(path)
+	newPath := filepath.Join(dir, newFilename)
+
+	// 如果新旧路径相同，不需要重命名
+	if path == newPath {
+		return path, nil
+	}
+
+	// 检查目标文件是否已存在
+	if _, err := os.Stat(newPath); err == nil {
+		return "", fmt.Errorf("目标文件已存在: %s", newFilename)
+	}
+
+	// 重命名磁盘上的文件
+	if err := os.Rename(path, newPath); err != nil {
+		return "", fmt.Errorf("重命名文件失败: %w", err)
+	}
+
+	return newPath, nil
 }
 
 // validatePath 验证文件路径是否在允许的目录内

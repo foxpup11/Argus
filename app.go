@@ -1284,13 +1284,18 @@ func (a *App) DeleteKnowledgeDocument(path string) error {
 	return a.knowledge.DeleteDocument(path)
 }
 
-// RenameKnowledgeDocument 重命名知识文档
-func (a *App) RenameKnowledgeDocument(path string, newName string) error {
+// RenameKnowledgeDocument 重命名知识文档，返回新的文件路径
+func (a *App) RenameKnowledgeDocument(path string, newName string) (string, error) {
 	if a.knowledge == nil {
-		return fmt.Errorf("知识管理引擎未初始化")
+		return "", fmt.Errorf("知识管理引擎未初始化")
 	}
 
-	return a.knowledge.RenameDocument(path, newName)
+	newPath, err := a.knowledge.RenameDocument(path, newName)
+	if err != nil {
+		return "", err
+	}
+
+	return newPath, nil
 }
 
 // CreateKnowledgeDocument 创建知识文档
