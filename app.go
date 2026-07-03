@@ -7,8 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	stdruntime "runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"agentscope-desktop/internal/analytics"
@@ -16,6 +18,7 @@ import (
 	"agentscope-desktop/internal/diff"
 	"agentscope-desktop/internal/export"
 	"agentscope-desktop/internal/knowledge"
+	"agentscope-desktop/internal/llm"
 	"agentscope-desktop/internal/monitor"
 	"agentscope-desktop/internal/risk"
 	"agentscope-desktop/internal/session"
@@ -29,6 +32,7 @@ import (
 type App struct {
 	ctx         context.Context
 	monitor     *monitor.Monitor
+	monitorMu   sync.RWMutex // 保护 monitor 字段的并发访问
 	settingsMgr *settings.Manager
 	analytics   *analytics.Engine
 	metaStore   *session.MetaStore
@@ -143,7 +147,21 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	// 初始化会话连续性引擎
-	continuityEngine, err := continuity.NewEngine()
+	var llmCfg *llm.ProviderConfig
+	if mgr != nil {
+		cfg := mgr.GetLLMConfig()
+		if cfg.Enabled && cfg.APIKey != "" {
+			llmCfg = &llm.ProviderConfig{
+				Name:    cfg.Provider,
+				APIKey:  cfg.APIKey,
+				BaseURL: cfg.BaseURL,
+				Model:   cfg.Model,
+				APIType: llm.ResolveAPIType(cfg.Provider),
+				Enabled: cfg.Enabled,
+			}
+		}
+	}
+	continuityEngine, err := continuity.NewEngine(llmCfg)
 	if err != nil {
 		log.Printf("WARN: 会话连续性引擎初始化失败: %v", err)
 	} else {
@@ -677,9 +695,142 @@ func (a *App) UpdateCustomRule(name, description, level, pattern string, enabled
 	})
 }
 
+// LLMConfigDTO 是前端 LLM 配置的数据传输对象
+type LLMConfigDTO struct {
+	Provider string `json:"provider"`
+	APIKey   string `json:"apiKey"`
+	BaseURL  string `json:"baseUrl"`
+	Model    string `json:"model"`
+	Enabled  bool   `json:"enabled"`
+}
+
+// GetLLMConfig 获取当前 LLM 配置
+func (a *App) GetLLMConfig() (*LLMConfigDTO, error) {
+	if a.settingsMgr == nil {
+		return &LLMConfigDTO{}, nil
+	}
+	cfg := a.settingsMgr.GetLLMConfig()
+	return &LLMConfigDTO{
+		Provider: cfg.Provider,
+		APIKey:   maskAPIKeyForDisplay(cfg.APIKey),
+		BaseURL:  cfg.BaseURL,
+		Model:    cfg.Model,
+		Enabled:  cfg.Enabled,
+	}, nil
+}
+
+// SaveLLMConfig 保存 LLM 配置并重建连续性引擎
+func (a *App) SaveLLMConfig(provider, apiKey, baseURL, model string, enabled bool) error {
+	if a.settingsMgr == nil {
+		return fmt.Errorf("设置管理器未初始化")
+	}
+
+	// 如果 APIKey 是脱敏后的值（含有***）且不是空，保留原有 Key
+	actualKey := apiKey
+	if strings.Contains(apiKey, "***") && apiKey != "" {
+		existing := a.settingsMgr.GetLLMConfig()
+		actualKey = existing.APIKey
+	}
+
+	cfg := settings.LLMConfig{
+		Provider: provider,
+		APIKey:   actualKey,
+		BaseURL:  baseURL,
+		Model:    model,
+		Enabled:  enabled,
+	}
+
+	if err := a.settingsMgr.UpdateLLMConfig(cfg); err != nil {
+		return fmt.Errorf("保存LLM配置失败: %w", err)
+	}
+
+	// 重建连续性引擎以应用新配置
+	var llmCfg *llm.ProviderConfig
+	if enabled && actualKey != "" {
+		llmCfg = &llm.ProviderConfig{
+			Name:    provider,
+			APIKey:  actualKey,
+			BaseURL: baseURL,
+			Model:   model,
+		APIType: llm.ResolveAPIType(provider),
+			Enabled: enabled,
+		}
+	}
+
+	var err error
+	a.continuity, err = continuity.NewEngine(llmCfg)
+	if err != nil {
+		return fmt.Errorf("重建连续性引擎失败: %w", err)
+	}
+
+	return nil
+}
+
+// TestLLMConnection 测试 LLM 连接是否正常
+func (a *App) TestLLMConnection(provider, apiKey, baseURL, model string) error {
+	actualKey := apiKey
+	if strings.Contains(apiKey, "***") && apiKey != "" {
+		if a.settingsMgr == nil {
+			return fmt.Errorf("设置管理器未初始化")
+		}
+		existing := a.settingsMgr.GetLLMConfig()
+		actualKey = existing.APIKey
+	}
+
+	if actualKey == "" {
+		return fmt.Errorf("API Key 不能为空")
+	}
+
+	client := llm.NewClient(llm.ProviderConfig{
+		Name:    provider,
+		APIKey:  actualKey,
+		BaseURL: baseURL,
+		Model:   model,
+		APIType: llm.ResolveAPIType(provider),
+		Enabled: true,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	_, err := client.ChatCompletion(ctx, []llm.ChatMessage{
+		{Role: "system", Content: "Reply with exactly the word OK and nothing else."},
+	})
+	if err != nil {
+		return fmt.Errorf("连接测试失败: %w", err)
+	}
+	return nil
+}
+
+// GetPresetProviders 获取预设的 LLM 提供商列表
+func (a *App) GetPresetProviders() map[string]map[string]string {
+	presets := llm.PresetProviders()
+	result := make(map[string]map[string]string)
+	for key, cfg := range presets {
+		result[key] = map[string]string{
+			"name":    cfg.Name,
+			"baseUrl": cfg.BaseURL,
+			"model":   cfg.Model,
+			"apiType": string(cfg.APIType),
+		}
+	}
+	return result
+}
+
+// maskAPIKeyForDisplay 脱敏显示 API Key
+func maskAPIKeyForDisplay(key string) string {
+	if len(key) <= 8 {
+		return "***"
+	}
+	return key[:4] + "***" + key[len(key)-4:]
+}
+
 // StartMonitoring starts watching the Claude sessions directory for changes.
 // Returns true if monitoring started successfully, false if already running.
 func (a *App) StartMonitoring() (bool, error) {
+	a.monitorMu.Lock()
+	defer a.monitorMu.Unlock()
+
 	if a.monitor != nil && a.monitor.IsRunning() {
 		return false, nil
 	}
@@ -715,6 +866,8 @@ func (a *App) StartMonitoring() (bool, error) {
 
 // StopMonitoring stops the file system monitor.
 func (a *App) StopMonitoring() {
+	a.monitorMu.Lock()
+	defer a.monitorMu.Unlock()
 	if a.monitor != nil {
 		a.monitor.Stop()
 		a.monitor = nil
@@ -723,6 +876,8 @@ func (a *App) StopMonitoring() {
 
 // IsMonitoring returns whether the monitor is currently active.
 func (a *App) IsMonitoring() bool {
+	a.monitorMu.RLock()
+	defer a.monitorMu.RUnlock()
 	if a.monitor == nil {
 		return false
 	}
@@ -1610,6 +1765,7 @@ type ContinuitySummary struct {
 	KnownIssues    []string                    `json:"knownIssues"`
 	GeneratedAt    time.Time                   `json:"generatedAt"`
 	Quality        ContinuityQualityInfo       `json:"quality"`
+	LLMEnhanced    bool                        `json:"llmEnhanced"`
 }
 
 // ContinuityQualityInfo 质量评分信息
@@ -1716,6 +1872,7 @@ func (a *App) GenerateContinuityHandoff(project string, sessionCount int) (*Cont
 			Freshness:    summary.Quality.Freshness,
 			OverallScore: summary.Quality.OverallScore,
 		},
+		LLMEnhanced: summary.LLMEnhanced,
 	}, nil
 }
 
@@ -1748,11 +1905,131 @@ func (a *App) GenerateContinuityPrompt(project string, sessionCount int) (string
 	return prompt, err
 }
 
+// ExportContinuityToMemoryWithData 使用已生成的摘要数据导出到 memory 目录
+// 避免重新调用 LLM，直接使用前端传递的摘要数据
+func (a *App) ExportContinuityToMemoryWithData(project string, summary *ContinuitySummary) (string, error) {
+	if a.continuity == nil {
+		return "", fmt.Errorf("会话连续性引擎未初始化")
+	}
+
+	// 将前端格式的摘要转换为内部格式
+	handoffSummary := convertToHandoffSummary(summary)
+
+	// 生成 Markdown 并保存
+	markdown := a.continuity.GetHandoffGenerator().GenerateMarkdown(handoffSummary)
+	return a.continuity.GetHandoffGenerator().SaveToMemory(handoffSummary, markdown)
+}
+
+// GenerateContinuityMarkdownWithData 使用已生成的摘要数据生成 Markdown
+// 避免重新调用 LLM，直接使用前端传递的摘要数据
+func (a *App) GenerateContinuityMarkdownWithData(project string, summary *ContinuitySummary) (string, error) {
+	if a.continuity == nil {
+		return "", fmt.Errorf("会话连续性引擎未初始化")
+	}
+
+	// 将前端格式的摘要转换为内部格式
+	handoffSummary := convertToHandoffSummary(summary)
+
+	// 生成 Markdown
+	return a.continuity.GetHandoffGenerator().GenerateMarkdown(handoffSummary), nil
+}
+
+// GenerateContinuityPromptWithData 使用已生成的摘要数据生成 Prompt
+// 避免重新调用 LLM，直接使用前端传递的摘要数据
+func (a *App) GenerateContinuityPromptWithData(project string, summary *ContinuitySummary) (string, error) {
+	if a.continuity == nil {
+		return "", fmt.Errorf("会话连续性引擎未初始化")
+	}
+
+	// 将前端格式的摘要转换为内部格式
+	handoffSummary := convertToHandoffSummary(summary)
+
+	// 生成 Prompt
+	return a.continuity.GetHandoffGenerator().GeneratePrompt(handoffSummary), nil
+}
+
+// convertToHandoffSummary 将前端格式的摘要转换为内部格式
+func convertToHandoffSummary(summary *ContinuitySummary) *continuity.HandoffSummary {
+	// 转换已完成任务
+	completedTasks := make([]continuity.CompletedTask, len(summary.CompletedTasks))
+	for i, t := range summary.CompletedTasks {
+		completedTasks[i] = continuity.CompletedTask{
+			Description:   t.Description,
+			SessionID:     t.SessionID,
+			FilesChanged:  t.FilesChanged,
+			VerifiedByGit: t.VerifiedByGit,
+			Timestamp:     t.Timestamp,
+		}
+	}
+
+	// 转换待办任务
+	pendingTasks := make([]continuity.PendingTask, len(summary.PendingTasks))
+	for i, t := range summary.PendingTasks {
+		pendingTasks[i] = continuity.PendingTask{
+			Description: t.Description,
+			Source:      t.Source,
+			SessionID:   t.SessionID,
+			FilesHint:   t.FilesHint,
+		}
+	}
+
+	// 转换关键决策
+	decisions := make([]continuity.Decision, len(summary.KeyDecisions))
+	for i, d := range summary.KeyDecisions {
+		decisions[i] = continuity.Decision{
+			Description: d.Description,
+			Context:     d.Context,
+			Timestamp:   d.Timestamp,
+			SessionID:   d.SessionID,
+		}
+	}
+
+	// 转换文件信息
+	modifiedFiles := make([]continuity.FileSummary, len(summary.ModifiedFiles))
+	for i, f := range summary.ModifiedFiles {
+		modifiedFiles[i] = continuity.FileSummary{
+			Path:         f.Path,
+			ChangeCount:  f.ChangeCount,
+			ActionCount:  f.ActionCount,
+			LastAction:   f.LastAction,
+			IsTestFile:   f.IsTestFile,
+			IsConfigFile: f.IsConfigFile,
+		}
+	}
+
+	return &continuity.HandoffSummary{
+		Project:        summary.Project,
+		SessionsUsed:   summary.SessionsUsed,
+		SessionsTotal:  summary.SessionsTotal,
+		Summary:        summary.Summary,
+		CompletedTasks: completedTasks,
+		PendingTasks:   pendingTasks,
+		KeyDecisions:   decisions,
+		ModifiedFiles:  modifiedFiles,
+		KnownIssues:    summary.KnownIssues,
+		GeneratedAt:    summary.GeneratedAt,
+		Quality: continuity.SummaryQuality{
+			Completeness: summary.Quality.Completeness,
+			Accuracy:     summary.Quality.Accuracy,
+			Freshness:    summary.Quality.Freshness,
+			OverallScore: summary.Quality.OverallScore,
+		},
+		LLMEnhanced: summary.LLMEnhanced,
+	}
+}
+
 // openDirectory 打开指定目录（跨平台）
 func openDirectory(dir string) error {
 	log.Printf("openDirectory: 打开目录: %q", dir)
-	// 使用 cmd /c start 打开文件夹，比直接调用 explorer.exe 更可靠
-	cmd := exec.Command("cmd", "/c", "start", "", dir)
+	var cmd *exec.Cmd
+	switch stdruntime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", "", dir)
+	case "darwin":
+		cmd = exec.Command("open", dir)
+	default: // linux
+		cmd = exec.Command("xdg-open", dir)
+	}
 	err := cmd.Start()
 	if err != nil {
 		log.Printf("openDirectory: 打开目录失败: %v", err)

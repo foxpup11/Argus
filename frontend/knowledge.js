@@ -603,8 +603,14 @@ function processInlineMarkdown(text) {
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         // 斜体
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        // 链接
-        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
+        // 链接（过滤 javascript: URI）
+        .replace(/\[(.*?)\]\((.*?)\)/g, (match, linkText, url) => {
+            const trimmedUrl = url.trim().toLowerCase();
+            if (trimmedUrl.startsWith('javascript:') || trimmedUrl.startsWith('data:')) {
+                return match; // 返回原始文本，不创建链接
+            }
+            return `<a href="${url}" target="_blank">${linkText}</a>`;
+        });
 }
 
 function toggleKnowledgeEdit() {

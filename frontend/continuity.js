@@ -76,7 +76,7 @@ function onContinuityProjectChange(value) {
 // 生成交接摘要
 async function generateContinuityHandoff() {
     if (!currentContinuityProject) {
-        showToast(t('selectProjectFirst') || '请先选择项目', 'error');
+        showContinuityToast(t('selectProjectFirst') || '请先选择项目', 'error');
         return;
     }
 
@@ -88,10 +88,12 @@ async function generateContinuityHandoff() {
 
     try {
         continuitySummary = await window.go.main.App.GenerateContinuityHandoff(currentContinuityProject, sessionCount);
+        stopProgressAnimation();
         renderContinuitySummary();
     } catch (error) {
         console.error('生成交接摘要失败:', error);
-        showToast(t('generateFailed') || '生成失败: ' + error, 'error');
+        stopProgressAnimation();
+        showContinuityToast(t('generateFailed') || '生成失败: ' + error, 'error');
     } finally {
         showContinuityLoading(false);
     }
@@ -112,6 +114,9 @@ function renderContinuitySummary() {
     html += '<div class="handoff-meta">';
     html += '<span class="meta-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> ' + s.sessionsUsed + ' / ' + s.sessionsTotal + ' sessions</span>';
     html += '<span class="meta-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ' + formatTime(s.generatedAt) + '</span>';
+    if (s.llmEnhanced) {
+        html += '<span class="meta-item llm-badge" style="color: var(--green, #22c55e); font-weight: 600;">LLM Enhanced</span>';
+    }
     html += '</div>';
     html += '</div>';
 
@@ -133,6 +138,14 @@ function renderContinuitySummary() {
         html += '<div class="quality-item"><span class="quality-label">' + (t('freshness') || '时效性') + '</span><span class="quality-value">' + Math.round(s.quality.freshness * 100) + '%</span></div>';
         html += '<div class="quality-item"><span class="quality-label">' + (t('overallScore') || '综合评分') + '</span><span class="quality-value overall">' + Math.round(s.quality.overallScore * 100) + '%</span></div>';
         html += '</div>';
+        html += '</div>';
+    }
+
+    // 叙事摘要（LLM 生成或关键词提取的核心内容）
+    if (s.summary) {
+        html += '<div class="handoff-section">';
+        html += '<h3><span class="section-icon info"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span> ' + (t('coreSummary') || '核心摘要') + '</h3>';
+        html += '<div class="summary-narrative">' + escapeHtml(s.summary).replace(/\n/g, '<br>') + '</div>';
         html += '</div>';
     }
 
@@ -266,60 +279,88 @@ function renderContinuitySummary() {
 
 // 导出到 memory
 async function exportContinuityToMemory() {
+    console.log('[Continuity] exportContinuityToMemory called, project:', currentContinuityProject);
     if (!currentContinuityProject) {
-        showToast(t('selectProjectFirst') || '请先选择项目', 'error');
+        showContinuityToast(t('selectProjectFirst') || '请先选择项目', 'error');
         return;
     }
 
-    const sessionCountInput = document.getElementById('continuitySessionCount');
-    const sessionCount = sessionCountInput ? parseInt(sessionCountInput.value) || 10 : 10;
+    // 如果没有已生成的摘要，先生成一个
+    if (!continuitySummary) {
+        showContinuityToast(t('generateSummaryFirst') || '请先生成交接摘要', 'error');
+        return;
+    }
 
     try {
-        const path = await window.go.main.App.ExportContinuityToMemory(currentContinuityProject, sessionCount);
-        showToast((t('exportSuccess') || '导出成功') + ': ' + path, 'success');
+        // 传递已生成的摘要数据，避免重新调用 LLM
+        const path = await window.go.main.App.ExportContinuityToMemoryWithData(currentContinuityProject, continuitySummary);
+        showContinuityToast((t('exportSuccess') || '导出成功') + ': ' + path, 'success');
     } catch (error) {
         console.error('导出到 memory 失败:', error);
-        showToast(t('exportFailed') || '导出失败: ' + error, 'error');
+        showContinuityToast((t('exportFailed') || '导出失败') + ': ' + error, 'error');
     }
 }
 
 // 生成 Markdown
 async function generateContinuityMarkdown() {
+    console.log('[Continuity] generateContinuityMarkdown called, project:', currentContinuityProject);
     if (!currentContinuityProject) {
-        showToast(t('selectProjectFirst') || '请先选择项目', 'error');
+        showContinuityToast(t('selectProjectFirst') || '请先选择项目', 'error');
         return;
     }
 
-    const sessionCountInput = document.getElementById('continuitySessionCount');
-    const sessionCount = sessionCountInput ? parseInt(sessionCountInput.value) || 10 : 10;
+    // 如果没有已生成的摘要，先生成一个
+    if (!continuitySummary) {
+        showContinuityToast(t('generateSummaryFirst') || '请先生成交接摘要', 'error');
+        return;
+    }
 
     try {
-        const markdown = await window.go.main.App.GenerateContinuityMarkdown(currentContinuityProject, sessionCount);
+        // 传递已生成的摘要数据，避免重新调用 LLM
+        const markdown = await window.go.main.App.GenerateContinuityMarkdownWithData(currentContinuityProject, continuitySummary);
         showMarkdownPreview(markdown);
+        showContinuityToast(t('markdownGenerated') || 'Markdown 已生成', 'success');
     } catch (error) {
         console.error('生成 Markdown 失败:', error);
-        showToast(t('generateFailed') || '生成失败: ' + error, 'error');
+        showContinuityToast((t('generateFailed') || '生成失败') + ': ' + error, 'error');
     }
 }
 
 // 生成 Prompt
 async function generateContinuityPrompt() {
+    console.log('[Continuity] generateContinuityPrompt called, project:', currentContinuityProject);
     if (!currentContinuityProject) {
-        showToast(t('selectProjectFirst') || '请先选择项目', 'error');
+        showContinuityToast(t('selectProjectFirst') || '请先选择项目', 'error');
         return;
     }
 
-    const sessionCountInput = document.getElementById('continuitySessionCount');
-    const sessionCount = sessionCountInput ? parseInt(sessionCountInput.value) || 10 : 10;
+    // 如果没有已生成的摘要，先生成一个
+    if (!continuitySummary) {
+        showContinuityToast(t('generateSummaryFirst') || '请先生成交接摘要', 'error');
+        return;
+    }
 
     try {
-        const prompt = await window.go.main.App.GenerateContinuityPrompt(currentContinuityProject, sessionCount);
-        // 复制到剪贴板
-        await navigator.clipboard.writeText(prompt);
-        showToast((t('copiedToClipboard') || '已复制到剪贴板'), 'success');
+        // 传递已生成的摘要数据，避免重新调用 LLM
+        const prompt = await window.go.main.App.GenerateContinuityPromptWithData(currentContinuityProject, continuitySummary);
+        // 兼容 Wails webview 环境的剪贴板写入
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(prompt);
+        } else {
+            // fallback: 使用 textarea + execCommand
+            const ta = document.createElement('textarea');
+            ta.value = prompt;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+        showContinuityToast((t('copiedToClipboard') || '已复制到剪贴板'), 'success');
     } catch (error) {
         console.error('生成 Prompt 失败:', error);
-        showToast(t('generateFailed') || '生成失败: ' + error, 'error');
+        showContinuityToast((t('generateFailed') || '生成失败') + ': ' + error, 'error');
     }
 }
 
@@ -350,9 +391,9 @@ async function copyMarkdownToClipboard() {
 
     try {
         await navigator.clipboard.writeText(content.dataset.markdown);
-        showToast((t('copiedToClipboard') || '已复制到剪贴板'), 'success');
+        showContinuityToast((t('copiedToClipboard') || '已复制到剪贴板'), 'success');
     } catch (error) {
-        showToast(t('copyFailed') || '复制失败', 'error');
+        showContinuityToast(t('copyFailed') || '复制失败', 'error');
     }
 }
 
@@ -362,12 +403,227 @@ function showContinuityLoading(show) {
     if (!content) return;
 
     if (show) {
-        content.innerHTML = '<div class="continuity-loading"><div class="spinner"></div><span>' + (t('generating') || '正在生成交接摘要...') + '</span></div>';
+        content.innerHTML = `
+            <div class="continuity-progress">
+                <div class="progress-header">
+                    <div class="progress-spinner"></div>
+                    <h3>${t('generating') || '正在生成交接摘要'}</h3>
+                </div>
+                <div class="progress-steps">
+                    <div class="progress-step active" id="progressStep1">
+                        <div class="step-indicator">
+                            <div class="step-dot"></div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title">${t('stepLoadingSessions') || '加载会话数据'}</div>
+                            <div class="step-desc">${t('stepLoadingSessionsDesc') || '读取项目历史会话记录'}</div>
+                        </div>
+                    </div>
+                    <div class="progress-step" id="progressStep2">
+                        <div class="step-indicator">
+                            <div class="step-dot"></div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title">${t('stepAnalyzing') || '分析会话内容'}</div>
+                            <div class="step-desc">${t('stepAnalyzingDesc') || '提取任务、决策和文件变更'}</div>
+                        </div>
+                    </div>
+                    <div class="progress-step" id="progressStep3">
+                        <div class="step-indicator">
+                            <div class="step-dot"></div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title">${t('stepValidating') || '验证数据完整性'}</div>
+                            <div class="step-desc">${t('stepValidatingDesc') || '交叉验证 Git 提交记录'}</div>
+                        </div>
+                    </div>
+                    <div class="progress-step" id="progressStep4">
+                        <div class="step-indicator">
+                            <div class="step-dot"></div>
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title">${t('stepGenerating') || '生成交接摘要'}</div>
+                            <div class="step-desc">${t('stepGeneratingDesc') || '组织最终报告'}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="continuityProgressBar" style="width: 0%"></div>
+                </div>
+            </div>`;
+        animateProgressSteps();
+    } else {
+        // 如果有摘要则渲染摘要，否则恢复空状态
+        if (continuitySummary) {
+            renderContinuitySummary();
+        } else {
+            content.innerHTML = `
+                <div class="continuity-empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <h3>${t('continuityEmpty') || '多会话接力引擎'}</h3>
+                    <p>${t('continuityEmptyDesc') || '选择项目并点击"生成交接摘要"来分析最近的会话'}</p>
+                </div>`;
+        }
     }
 }
 
-// 显示 toast 消息
-function showToast(message, type) {
+// 动画进度步骤
+let progressAnimTimer = null;
+function animateProgressSteps() {
+    let currentStep = 1;
+    const totalSteps = 4;
+
+    function advanceStep() {
+        if (currentStep > totalSteps) return;
+
+        // Mark current step as completed
+        const stepEl = document.getElementById('progressStep' + currentStep);
+        if (stepEl) {
+            stepEl.classList.remove('active');
+            stepEl.classList.add('completed');
+        }
+
+        // Update progress bar
+        const bar = document.getElementById('continuityProgressBar');
+        if (bar) {
+            bar.style.width = (currentStep / totalSteps * 100) + '%';
+        }
+
+        currentStep++;
+
+        // Activate next step
+        if (currentStep <= totalSteps) {
+            const nextStep = document.getElementById('progressStep' + currentStep);
+            if (nextStep) {
+                nextStep.classList.add('active');
+            }
+        }
+
+        progressAnimTimer = setTimeout(advanceStep, 800 + Math.random() * 600);
+    }
+
+    progressAnimTimer = setTimeout(advanceStep, 500);
+}
+
+function stopProgressAnimation() {
+    if (progressAnimTimer) {
+        clearTimeout(progressAnimTimer);
+        progressAnimTimer = null;
+    }
+}
+
+// ============================================
+// LLM Config Modal
+// ============================================
+
+function openContinuityLLMModal() {
+    const modal = document.getElementById('continuityLLMModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+    renderContinuityLLMConfig();
+}
+
+function closeContinuityLLMModal() {
+    const modal = document.getElementById('continuityLLMModal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 200);
+}
+
+function renderContinuityLLMConfig() {
+    window.go.main.App.GetLLMConfig().then(cfg => {
+        if (cfg) {
+            document.getElementById('continuityLLMEnabled').checked = cfg.enabled || false;
+            document.getElementById('continuityLLMProvider').value = cfg.provider || 'mimo';
+            document.getElementById('continuityLLMAPIKey').value = cfg.apiKey || '';
+            document.getElementById('continuityLLMBaseURL').value = cfg.baseUrl || '';
+            document.getElementById('continuityLLMModel').value = cfg.model || '';
+        }
+        onContinuityLLMEnabledChange();
+    }).catch(err => {
+        console.error('Failed to load LLM config:', err);
+    });
+}
+
+function onContinuityLLMEnabledChange() {
+    var enabled = document.getElementById('continuityLLMEnabled').checked;
+    document.getElementById('continuityLLMConfigFields').style.display = enabled ? 'block' : 'none';
+    if (enabled) onContinuityLLMProviderChange();
+}
+
+function onContinuityLLMProviderChange() {
+    var provider = document.getElementById('continuityLLMProvider').value;
+    var isCustom = (provider === 'custom');
+    document.getElementById('continuityLLMBaseURLGroup').style.display = isCustom ? 'block' : 'none';
+
+    var presets = {
+        'mimo':     { model: 'MiniMax-M2.5',   baseUrl: 'https://api.xiaomimimo.com/anthropic' },
+        'deepseek': { model: 'deepseek-chat',   baseUrl: 'https://api.deepseek.com/v1' }
+    };
+
+    if (presets[provider]) {
+        var modelEl = document.getElementById('continuityLLMModel');
+        var baseEl = document.getElementById('continuityLLMBaseURL');
+        if (!modelEl.value || modelEl.value === '') {
+            modelEl.value = presets[provider].model;
+        }
+        baseEl.value = presets[provider].baseUrl;
+    }
+}
+
+async function saveContinuityLLMConfig() {
+    var provider = document.getElementById('continuityLLMProvider').value;
+    var apiKey = document.getElementById('continuityLLMAPIKey').value.trim();
+    var baseURL = document.getElementById('continuityLLMBaseURL').value.trim();
+    var model = document.getElementById('continuityLLMModel').value.trim();
+    var enabled = document.getElementById('continuityLLMEnabled').checked;
+
+    try {
+        await window.go.main.App.SaveLLMConfig(provider, apiKey, baseURL, model, enabled);
+        showContinuityToast('LLM 配置已保存', 'success');
+    } catch (error) {
+        console.error('保存LLM配置失败:', error);
+        showContinuityToast('保存失败: ' + error, 'error');
+    }
+}
+
+async function testContinuityLLMConnection() {
+    var provider = document.getElementById('continuityLLMProvider').value;
+    var apiKey = document.getElementById('continuityLLMAPIKey').value.trim();
+    var baseURL = document.getElementById('continuityLLMBaseURL').value.trim();
+    var model = document.getElementById('continuityLLMModel').value.trim();
+    var resultEl = document.getElementById('continuityLLMTestResult');
+
+    if (!apiKey) {
+        showContinuityToast('请先输入 API Key', 'error');
+        return;
+    }
+
+    resultEl.className = 'llm-test-result loading';
+    resultEl.textContent = '测试中...';
+
+    try {
+        await window.go.main.App.TestLLMConnection(provider, apiKey, baseURL, model);
+        resultEl.className = 'llm-test-result success';
+        resultEl.textContent = '连接测试成功';
+    } catch (error) {
+        resultEl.className = 'llm-test-result error';
+        resultEl.textContent = '连接失败: ' + error;
+    }
+}
+
+// 显示 toast 消息（continuity 面板专用，不覆盖全局 showToast）
+function showContinuityToast(message, type) {
+    console.log('[Continuity] showToast:', type, message);
     // 移除现有的 toast
     const existing = document.querySelector('.continuity-toast');
     if (existing) {
@@ -377,6 +633,9 @@ function showToast(message, type) {
     const toast = document.createElement('div');
     toast.className = 'continuity-toast ' + (type || '');
     toast.textContent = message;
+    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:12px 24px;background:' +
+        (type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#1f2937') +
+        ';color:#fff;border-radius:8px;font-size:14px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;word-break:break-word;animation:toastIn 0.3s ease;';
     document.body.appendChild(toast);
 
     // 3 秒后自动消失

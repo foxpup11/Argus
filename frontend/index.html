@@ -708,6 +708,15 @@
                             <span data-i18n="copyPrompt">复制 Prompt</span>
                         </button>
                     </div>
+
+                    <!-- LLM 配置入口 -->
+                    <button class="btn-llm-settings" onclick="openContinuityLLMModal()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                        <span data-i18n="llmProvider">LLM Provider</span>
+                    </button>
                 </aside>
 
                 <!-- 右侧内容区域 -->
@@ -883,6 +892,71 @@
                         </svg>
                         <span data-i18n="addRule">添加规则</span>
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LLM Config Modal (Continuity) -->
+    <div id="continuityLLMModal" class="modal" style="display: none;">
+        <div class="llm-modal-content">
+            <div class="llm-modal-header">
+                <div class="llm-modal-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93"/>
+                        <path d="M8.56 9.8A4 4 0 1 1 15.4 12"/>
+                        <path d="M12 18v4"/>
+                        <path d="M8 22h8"/>
+                        <circle cx="12" cy="6" r="2"/>
+                    </svg>
+                </div>
+                <div class="llm-modal-header-text">
+                    <h2 data-i18n="llmProvider">LLM Provider</h2>
+                    <p>配置大模型来提升多会话摘要质量</p>
+                </div>
+                <button class="llm-modal-close" onclick="closeContinuityLLMModal()">&times;</button>
+            </div>
+            <div class="llm-modal-body">
+                <div class="llm-enable-row">
+                    <span class="llm-enable-label">启用 LLM 增强</span>
+                    <label class="llm-toggle">
+                        <input type="checkbox" id="continuityLLMEnabled" onchange="onContinuityLLMEnabledChange()">
+                        <span class="llm-toggle-track"></span>
+                    </label>
+                </div>
+
+                <div id="continuityLLMConfigFields" style="display: none;">
+                    <div class="llm-form-section">
+                        <div class="llm-form-group">
+                            <label class="llm-form-label">提供商</label>
+                            <select id="continuityLLMProvider" class="llm-form-select" onchange="onContinuityLLMProviderChange()">
+                                <option value="mimo">MiMo V2.5</option>
+                                <option value="deepseek">DeepSeek</option>
+                                <option value="custom">自定义 (OpenAI 兼容)</option>
+                            </select>
+                        </div>
+
+                        <div class="llm-form-group">
+                            <label class="llm-form-label">API Key</label>
+                            <input type="password" id="continuityLLMAPIKey" class="llm-form-input" placeholder="sk-..." autocomplete="off">
+                        </div>
+
+                        <div class="llm-form-group" id="continuityLLMBaseURLGroup" style="display: none;">
+                            <label class="llm-form-label">Base URL</label>
+                            <input type="text" id="continuityLLMBaseURL" class="llm-form-input" placeholder="https://api.example.com/v1">
+                        </div>
+
+                        <div class="llm-form-group">
+                            <label class="llm-form-label">模型</label>
+                            <input type="text" id="continuityLLMModel" class="llm-form-input" placeholder="deepseek-chat">
+                        </div>
+                    </div>
+
+                    <div class="llm-form-actions">
+                        <button class="llm-btn-primary" onclick="saveContinuityLLMConfig()">保存配置</button>
+                        <button class="llm-btn-secondary" onclick="testContinuityLLMConnection()">测试连接</button>
+                    </div>
+                    <div id="continuityLLMTestResult" class="llm-test-result"></div>
                 </div>
             </div>
         </div>

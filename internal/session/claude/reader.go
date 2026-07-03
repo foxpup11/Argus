@@ -68,8 +68,8 @@ func (r *Reader) Read(path string) (*session.Session, error) {
 	var lastTime time.Time
 
 	scanner := bufio.NewScanner(file)
-	// 使用较小的初始缓冲区，仅在需要时扩展到最大值
-	const maxScanTokenSize = 50 * 1024 * 1024
+	// 使用 64KB 初始缓冲区，最大 4MB，避免 50MB 内存尖峰
+	const maxScanTokenSize = 4 * 1024 * 1024
 	scanner.Buffer(make([]byte, 0, 64*1024), maxScanTokenSize)
 
 	seenPrompts := make(map[string]bool)

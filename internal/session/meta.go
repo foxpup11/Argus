@@ -1,6 +1,7 @@
 package session
 
 import (
+	"regexp"
 	"time"
 )
 
@@ -24,9 +25,10 @@ type Tag struct {
 
 // AutoTagRule 自动标签规则
 type AutoTagRule struct {
-	Pattern string   `json:"pattern"` // 匹配模式（正则或关键词）
-	Tag     string   `json:"tag"`     // 对应的标签
-	Fields  []string `json:"fields"`  // 匹配的字段：prompt, filePath, command
+	Pattern    string        `json:"pattern"`    // 匹配模式（正则或关键词）
+	Tag        string        `json:"tag"`        // 对应的标签
+	Fields     []string      `json:"fields"`     // 匹配的字段：prompt, filePath, command
+	CompiledRe *regexp.Regexp `json:"-"`         // 预编译的正则表达式（运行时使用）
 }
 
 // DefaultAutoTags 默认的自动标签规则
@@ -51,6 +53,16 @@ var DefaultAutoTags = []AutoTagRule{
 	{Pattern: "\\.html$|\\.vue$", Tag: "markup", Fields: []string{"filePath"}},
 	{Pattern: "(?i)(docker|k8s|kubernetes)", Tag: "devops", Fields: []string{"prompt", "command"}},
 	{Pattern: "(?i)(sql|database|migration)", Tag: "database", Fields: []string{"prompt", "command"}},
+}
+
+func init() {
+	// 预编译所有正则表达式，避免每次调用时重复编译
+	for i := range DefaultAutoTags {
+		re, err := regexp.Compile(DefaultAutoTags[i].Pattern)
+		if err == nil {
+			DefaultAutoTags[i].CompiledRe = re
+		}
+	}
 }
 
 // SearchQuery 搜索查询参数

@@ -3,9 +3,9 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -370,13 +370,8 @@ func (s *MetaStore) ApplyAutoTags(sessionID, prompt string, filePaths []string, 
 			}
 		}
 
-		// 尝试正则匹配
-		re, err := regexp.Compile(rule.Pattern)
-		if err != nil {
-			continue
-		}
-
-		if re.MatchString(matchText) {
+		// 使用预编译的正则表达式
+		if rule.CompiledRe != nil && rule.CompiledRe.MatchString(matchText) {
 			if !tagSet[rule.Tag] {
 				newTags = append(newTags, rule.Tag)
 				tagSet[rule.Tag] = true
@@ -388,7 +383,9 @@ func (s *MetaStore) ApplyAutoTags(sessionID, prompt string, filePaths []string, 
 		meta.AutoTags = append(meta.AutoTags, newTags...)
 		sort.Strings(meta.AutoTags)
 		meta.UpdatedAt = time.Now()
-		s.save()
+		if err := s.save(); err != nil {
+			log.Printf("Failed to save auto tags for session %s: %v", sessionID, err)
+		}
 	}
 
 	return newTags

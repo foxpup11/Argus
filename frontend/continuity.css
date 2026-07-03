@@ -313,6 +313,19 @@
     color: #991b1b;
 }
 
+/* 叙事摘要区块 */
+.summary-narrative {
+    padding: 16px;
+    background: var(--bg-secondary, #f9fafb);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-primary, #1f2937);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 /* 任务列表 */
 .task-list {
     display: flex;
@@ -527,6 +540,174 @@
     to { transform: rotate(360deg); }
 }
 
+/* ============================================
+   Progress Indicator
+   ============================================ */
+
+.continuity-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 40px;
+}
+
+.progress-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+}
+
+.progress-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--border-color, #e5e7eb);
+    border-top-color: var(--primary-color, #3b82f6);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.progress-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary, #1f2937);
+    margin: 0;
+}
+
+.progress-steps {
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 24px;
+}
+
+.progress-step {
+    display: flex;
+    gap: 12px;
+    opacity: 0.4;
+    transition: opacity 0.3s;
+}
+
+.progress-step.active {
+    opacity: 1;
+}
+
+.progress-step.completed {
+    opacity: 0.7;
+}
+
+.step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.step-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--border-color, #e5e7eb);
+    border: 2px solid var(--border-color, #e5e7eb);
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+
+.progress-step.active .step-dot {
+    background: var(--primary-color, #3b82f6);
+    border-color: var(--primary-color, #3b82f6);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.progress-step.completed .step-dot {
+    background: var(--success-color, #10b981);
+    border-color: var(--success-color, #10b981);
+}
+
+.step-line {
+    width: 2px;
+    height: 28px;
+    background: var(--border-color, #e5e7eb);
+    margin: 4px 0;
+}
+
+.progress-step.completed .step-line {
+    background: var(--success-color, #10b981);
+}
+
+.step-content {
+    padding-bottom: 16px;
+}
+
+.step-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary, #1f2937);
+    margin-bottom: 2px;
+}
+
+.step-desc {
+    font-size: 12px;
+    color: var(--text-secondary, #6b7280);
+}
+
+.progress-step.active .step-title {
+    color: var(--primary-color, #3b82f6);
+}
+
+.progress-step.completed .step-title {
+    color: var(--success-color, #10b981);
+}
+
+.progress-bar-container {
+    width: 100%;
+    max-width: 360px;
+    height: 4px;
+    background: var(--border-color, #e5e7eb);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color, #3b82f6), var(--success-color, #10b981));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); }
+    50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.1); }
+}
+
+/* ============================================
+   LLM Settings Button
+   ============================================ */
+
+.btn-llm-settings {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 6px;
+    background: var(--bg-secondary, #f9fafb);
+    color: var(--text-secondary, #6b7280);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: auto;
+}
+
+.btn-llm-settings:hover {
+    background: var(--primary-light, #eff6ff);
+    border-color: var(--primary-color, #3b82f6);
+    color: var(--primary-color, #3b82f6);
+}
+
 /* 提示/警告消息 */
 .continuity-toast {
     position: fixed;
@@ -608,4 +789,297 @@
 .quality-value.overall {
     font-size: 16px;
     color: var(--success-color, #10b981);
+}
+
+/* ============================================
+   LLM Config Modal
+   ============================================ */
+
+.llm-modal-content {
+    background: var(--bg-primary, #ffffff);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 440px;
+    max-height: 85vh;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
+    transform: translateY(12px) scale(0.98);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal.show .llm-modal-content {
+    transform: translateY(0) scale(1);
+}
+
+.llm-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px 16px;
+}
+
+.llm-modal-header-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent, #0d6efd), #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.llm-modal-header-icon svg {
+    width: 18px;
+    height: 18px;
+    color: #fff;
+}
+
+.llm-modal-header-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.llm-modal-header-text h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary, #1a1a1a);
+    margin: 0;
+    line-height: 1.3;
+}
+
+.llm-modal-header-text p {
+    font-size: 12px;
+    color: var(--text-secondary, #6c757d);
+    margin: 2px 0 0;
+    line-height: 1.4;
+}
+
+.llm-modal-close {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: var(--bg-tertiary, #f1f3f5);
+    border-radius: 8px;
+    font-size: 16px;
+    color: var(--text-secondary, #6c757d);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.llm-modal-close:hover {
+    background: var(--bg-hover, #e9ecef);
+    color: var(--text-primary, #1a1a1a);
+}
+
+.llm-modal-body {
+    padding: 0 24px 24px;
+}
+
+/* Toggle Row */
+.llm-enable-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.llm-enable-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary, #1a1a1a);
+}
+
+/* iOS-style Toggle */
+.llm-toggle {
+    position: relative;
+    width: 44px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.llm-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.llm-toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-tertiary, #dee2e6);
+    border-radius: 13px;
+    cursor: pointer;
+    transition: background 0.25s ease;
+}
+
+.llm-toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.llm-toggle input:checked + .llm-toggle-track {
+    background: var(--accent, #0d6efd);
+}
+
+.llm-toggle input:checked + .llm-toggle-track::after {
+    transform: translateX(18px);
+}
+
+/* Form Section Card */
+.llm-form-section {
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border, #e9ecef);
+}
+
+.llm-form-group {
+    margin-bottom: 16px;
+}
+
+.llm-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.llm-form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary, #6c757d);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+.llm-form-input,
+.llm-form-select {
+    width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--border, #e9ecef);
+    border-radius: 8px;
+    background: var(--bg-primary, #ffffff);
+    color: var(--text-primary, #1a1a1a);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.llm-form-input:focus,
+.llm-form-select:focus {
+    border-color: var(--accent, #0d6efd);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.llm-form-input::placeholder {
+    color: var(--text-tertiary, #adb5bd);
+}
+
+.llm-form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236c757d' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+}
+
+/* Actions */
+.llm-form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.llm-btn-primary {
+    flex: 1;
+    height: 38px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent, #0d6efd);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.llm-btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.llm-btn-primary:active {
+    transform: translateY(0);
+}
+
+.llm-btn-secondary {
+    height: 38px;
+    padding: 0 16px;
+    border: 1px solid var(--border, #e9ecef);
+    border-radius: 8px;
+    background: var(--bg-primary, #ffffff);
+    color: var(--text-primary, #1a1a1a);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.llm-btn-secondary:hover {
+    background: var(--bg-tertiary, #f1f3f5);
+    border-color: var(--border-hover, #dee2e6);
+}
+
+/* Test Result */
+.llm-test-result {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.5;
+    display: none;
+}
+
+.llm-test-result.success {
+    display: block;
+    background: rgba(25, 135, 84, 0.08);
+    color: var(--success, #198754);
+    border: 1px solid rgba(25, 135, 84, 0.2);
+}
+
+.llm-test-result.error {
+    display: block;
+    background: rgba(220, 53, 69, 0.08);
+    color: var(--danger, #dc3545);
+    border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+.llm-test-result.loading {
+    display: block;
+    background: var(--bg-secondary, #f8f9fa);
+    color: var(--text-secondary, #6c757d);
+    border: 1px solid var(--border, #e9ecef);
 }

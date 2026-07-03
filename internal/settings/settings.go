@@ -20,6 +20,15 @@ const (
 	ThemeAuto  Theme = "auto"
 )
 
+// LLMConfig 大模型配置
+type LLMConfig struct {
+	Provider string `json:"provider"` // 预设提供商: "mimo", "deepseek", "custom"
+	APIKey   string `json:"apiKey"`   // 用户 API Key
+	BaseURL  string `json:"baseUrl"`  // API 端点
+	Model    string `json:"model"`    // 模型名
+	Enabled  bool   `json:"enabled"`  // 是否启用
+}
+
 // Settings 应用设置
 type Settings struct {
 	mu sync.RWMutex `json:"-"`
@@ -29,6 +38,9 @@ type Settings struct {
 
 	// 风险规则
 	CustomRules []CustomRule `json:"customRules"`
+
+	// LLM 配置
+	LLM LLMConfig `json:"llm"`
 }
 
 // CustomRule 自定义风险规则
@@ -87,6 +99,7 @@ func (m *Manager) Get() *Settings {
 	result := &Settings{
 		Theme:       m.settings.Theme,
 		CustomRules: make([]CustomRule, len(m.settings.CustomRules)),
+		LLM:         m.settings.LLM,
 	}
 	copy(result.CustomRules, m.settings.CustomRules)
 	return result
@@ -141,6 +154,23 @@ func (m *Manager) UpdateCustomRule(name string, rule CustomRule) error {
 	}
 
 	return nil
+}
+
+// UpdateLLMConfig 更新 LLM 配置
+func (m *Manager) UpdateLLMConfig(config LLMConfig) error {
+	m.settings.mu.Lock()
+	defer m.settings.mu.Unlock()
+
+	m.settings.LLM = config
+	return m.save()
+}
+
+// GetLLMConfig 获取当前 LLM 配置
+func (m *Manager) GetLLMConfig() LLMConfig {
+	m.settings.mu.RLock()
+	defer m.settings.mu.RUnlock()
+
+	return m.settings.LLM
 }
 
 // load 从文件加载设置

@@ -63,7 +63,11 @@ func (g *HandoffGenerator) GenerateMarkdown(summary *HandoffSummary) string {
 		sb.WriteString("## [DONE] 已完成任务\n\n")
 		for i, task := range summary.CompletedTasks {
 			sb.WriteString(fmt.Sprintf("%d. **%s**\n", i+1, task.Description))
-			sb.WriteString(fmt.Sprintf("   - 会话: `%s`\n", task.SessionID[:8]))
+			if len(task.SessionID) >= 8 {
+				sb.WriteString(fmt.Sprintf("   - 会话: `%s`\n", task.SessionID[:8]))
+			} else if task.SessionID != "" {
+				sb.WriteString(fmt.Sprintf("   - 会话: `%s`\n", task.SessionID))
+			}
 			if task.VerifiedByGit {
 				sb.WriteString("   - 状态: [verified] Git 已验证\n")
 			} else {
@@ -88,7 +92,11 @@ func (g *HandoffGenerator) GenerateMarkdown(summary *HandoffSummary) string {
 		sb.WriteString("## [TODO] 待办事项\n\n")
 		for i, task := range summary.PendingTasks {
 			sb.WriteString(fmt.Sprintf("%d. **%s**\n", i+1, task.Description))
-			sb.WriteString(fmt.Sprintf("   - 来源: %s (会话 `%s`)\n", task.Source, task.SessionID[:8]))
+			if len(task.SessionID) >= 8 {
+				sb.WriteString(fmt.Sprintf("   - 来源: %s (会话 `%s`)\n", task.Source, task.SessionID[:8]))
+			} else if task.SessionID != "" {
+				sb.WriteString(fmt.Sprintf("   - 来源: %s (会话 `%s`)\n", task.Source, task.SessionID))
+			}
 			if len(task.FilesHint) > 0 {
 				sb.WriteString(fmt.Sprintf("   - 相关文件: %s\n", strings.Join(task.FilesHint, ", ")))
 			}
@@ -135,7 +143,16 @@ func (g *HandoffGenerator) GenerateMarkdown(summary *HandoffSummary) string {
 		sb.WriteString("\n")
 	}
 
-	return sb.String()
+	// 行数兜底：超过 MaxSummaryLines 时截断
+	content := sb.String()
+	lines := strings.Split(content, "\n")
+	if len(lines) > MaxSummaryLines {
+		lines = lines[:MaxSummaryLines]
+		lines = append(lines, "", "> [!NOTE]", fmt.Sprintf("> 摘要已截断至 %d 行，完整内容请查看原始数据。", MaxSummaryLines))
+		content = strings.Join(lines, "\n")
+	}
+
+	return content
 }
 
 // GeneratePrompt 生成可直接粘贴的 prompt 片段
@@ -240,14 +257,14 @@ func truncatePath(path string) string {
 		return path
 	}
 
-	// 尝试保留最后两级目录
-	parts := strings.Split(path, "/")
+	// 使用 filepath.Separator 分割路径（兼容 Windows 和 Unix）
+	parts := strings.Split(path, string(filepath.Separator))
 	if len(parts) <= 2 {
 		return path
 	}
 
 	// 保留最后两个部分
-	lastTwo := strings.Join(parts[len(parts)-2:], "/")
+	lastTwo := strings.Join(parts[len(parts)-2:], string(filepath.Separator))
 	if len(lastTwo) <= 45 {
 		return ".../" + lastTwo
 	}

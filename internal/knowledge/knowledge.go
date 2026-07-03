@@ -258,6 +258,14 @@ func (e *Engine) validatePath(path string) error {
 		if err != nil {
 			continue
 		}
+		// 确保目录分隔符在末尾，避免前缀匹配绕过
+		// 例如：/home/user/.claude-evil 不能匹配 /home/user/.claude
+		if !strings.HasSuffix(absDir, string(filepath.Separator)) {
+			absDir += string(filepath.Separator)
+		}
+		if !strings.HasSuffix(absPath, string(filepath.Separator)) {
+			absPath += string(filepath.Separator)
+		}
 		if strings.HasPrefix(absPath, absDir) {
 			return nil
 		}

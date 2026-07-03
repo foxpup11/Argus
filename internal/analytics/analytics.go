@@ -39,22 +39,25 @@ func (e *Engine) Refresh() (*TokenOverview, error) {
 }
 
 func (e *Engine) GetOverview() (*TokenOverview, error) {
+	// 快速路径：缓存命中时无需加锁
 	e.mu.RLock()
 	if e.cache != nil {
-		defer e.mu.RUnlock()
-		return e.cache, nil
+		result := e.cache
+		e.mu.RUnlock()
+		return result, nil
 	}
 	e.mu.RUnlock()
 
-	// 使用互斥锁防止并发刷新
+	// 慢路径：使用 refreshMu 防止并发刷新
 	e.refreshMu.Lock()
 	defer e.refreshMu.Unlock()
 
-	// 再次检查缓存，避免重复刷新
+	// 再次检查缓存，避免重复刷新（此时已持有 refreshMu）
 	e.mu.RLock()
 	if e.cache != nil {
-		defer e.mu.RUnlock()
-		return e.cache, nil
+		result := e.cache
+		e.mu.RUnlock()
+		return result, nil
 	}
 	e.mu.RUnlock()
 
@@ -244,7 +247,8 @@ func (e *Engine) parseJSONL(path, projectDirName string) (*sessionRecord, error)
 	rec := &sessionRecord{ProjectDir: projectDirName, ModDay: modDay}
 	seenUUIDs := make(map[string]bool)
 	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 50*1024*1024), 50*1024*1024)
+	// 使用 1MB 初始缓冲区，最大 4MB，避免每次调用分配 50MB
+	scanner.Buffer(make([]byte, 0, 1024*1024), 4*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {

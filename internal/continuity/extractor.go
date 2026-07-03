@@ -22,7 +22,7 @@ func NewExtractor() *Extractor {
 
 // filePatterns 匹配文件路径的正则
 var filePathPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`[\w\-/\\.]+\.\w{1,10}`), // 一般文件路径
+	regexp.MustCompile(`[\w\-]+(?:/[\w\-]+)*\.[a-zA-Z]{1,10}`), // 文件路径，如 src/utils/helper.go
 }
 
 // taskTypeKeywords 任务类型关键词映射
@@ -489,7 +489,6 @@ func containsCodeOrMarkdown(text string) bool {
 	codeIndicators := []string{
 		"```", "func ", "var ", "import ", "package ",
 		"if ", "for ", "switch ", "case ",
-		"[", "]", "{", "}",
 		"//", "/*", "*/",
 	}
 	for _, indicator := range codeIndicators {
@@ -1073,19 +1072,9 @@ func FilterSessionsByProject(sessions []*session.Session, projectDir string) []*
 
 // sortSessionsByTime 按时间排序会话（最新的在前）
 func SortSessionsByTime(sessions []*session.Session) {
-	timeSortFunc := func(i, j int) bool {
+	sort.Slice(sessions, func(i, j int) bool {
 		return sessions[i].StartedAt.After(sessions[j].StartedAt)
-	}
-	_ = timeSortFunc // 避免未使用警告
-
-	// 使用标准库排序
-	for i := 0; i < len(sessions); i++ {
-		for j := i + 1; j < len(sessions); j++ {
-			if sessions[j].StartedAt.After(sessions[i].StartedAt) {
-				sessions[i], sessions[j] = sessions[j], sessions[i]
-			}
-		}
-	}
+	})
 }
 
 // FilterRecentSessions 只保留最近 N 个会话

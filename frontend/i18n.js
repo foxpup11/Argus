@@ -218,7 +218,6 @@ const i18n = {
         features: '特性',
         noProjects: '未找到项目',
         openFileLocationFailed: '打开文件位置失败',
-        cancel: '取消',
 
         // 多会话接力
         continuityTab: '多会话接力',
@@ -232,6 +231,7 @@ const i18n = {
         continuityEmpty: '多会话接力引擎',
         continuityEmptyDesc: '选择项目并点击"生成交接摘要"来分析最近的会话',
         handoffTitle: '会话交接摘要',
+        coreSummary: '核心摘要',
         completedTasks: '已完成任务',
         pendingTasks: '待办事项',
         keyDecisions: '关键决策',
@@ -492,6 +492,7 @@ const i18n = {
         continuityEmpty: 'Multi-Session Relay Engine',
         continuityEmptyDesc: 'Select a project and click "Generate Handoff" to analyze recent sessions',
         handoffTitle: 'Session Handoff Summary',
+        coreSummary: 'Core Summary',
         completedTasks: 'Completed Tasks',
         pendingTasks: 'Pending Tasks',
         keyDecisions: 'Key Decisions',
