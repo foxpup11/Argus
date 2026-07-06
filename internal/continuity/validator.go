@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"agentscope-desktop/internal/session"
+	"argus-desktop/internal/session"
 )
 
 // Validator Git 交叉验证器

@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentScope</title>
+    <title>Argus</title>
     <link rel="stylesheet" href="./style.css">
     <link rel="stylesheet" href="./dashboard.css">
     <link rel="stylesheet" href="./knowledge.css">
     <link rel="stylesheet" href="./claudemd-editor.css">
     <link rel="stylesheet" href="./conversation.css">
     <link rel="stylesheet" href="./continuity.css">
+    <link rel="stylesheet" href="./plugin-studio.css">
     <link rel="stylesheet" href="./splash.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script>
@@ -29,10 +30,10 @@
         <div class="splash-content">
             <div class="splash-logo-container">
                 <div class="splash-glow"></div>
-                <img src="./appicon.png" alt="AgentScope" class="splash-logo">
+                <img src="./appicon.png" alt="Argus" class="splash-logo">
                 <div class="splash-pulse"></div>
             </div>
-            <h1 class="splash-title">AgentScope</h1>
+            <h1 class="splash-title">Argus</h1>
             <p class="splash-subtitle">Visualize your Claude Code</p>
             <div class="splash-progress">
                 <div class="splash-progress-bar"></div>
@@ -44,7 +45,7 @@
         <!-- Header -->
         <header class="header">
             <div class="title-section">
-                <h1 class="title">AgentScope</h1>
+                <h1 class="title">Argus</h1>
             </div>
             <nav class="header-nav">
                 <button class="nav-tab active" data-tab="dashboard" onclick="switchTab('dashboard')">
@@ -79,6 +80,12 @@
                         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                     </svg>
                     <span data-i18n="continuityTab">多会话接力</span>
+                </button>
+                <button class="nav-tab" data-tab="pluginStudio" onclick="switchTab('pluginStudio')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                    </svg>
+                    <span data-i18n="pluginStudioTab">插件工作室</span>
                 </button>
             </nav>
             <div class="header-actions">
@@ -735,6 +742,173 @@
             </div>
         </div>
 
+        <!-- ============================================ -->
+        <!-- TAB: Plugin Studio (插件工作室)               -->
+        <!-- ============================================ -->
+        <div id="pluginStudioPanel" class="tab-panel">
+            <div class="plugin-studio-header">
+                <h2 data-i18n="pluginStudio">插件工作室</h2>
+                <div class="plugin-studio-actions">
+                    <button class="btn btn-secondary" onclick="validatePluginSettings()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        <span data-i18n="validate">验证</span>
+                    </button>
+                    <button id="pluginSaveBtn" class="btn btn-primary" onclick="saveAllPluginSettings()" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                            <polyline points="17 21 17 13 7 13 7 21"/>
+                            <polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        <span data-i18n="save">保存</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="plugin-studio-content">
+                <!-- Hooks Section -->
+                <section class="config-section">
+                    <div class="config-section-header">
+                        <h3 class="config-section-title" data-i18n="hooksConfig">Hooks 配置</h3>
+                        <button class="btn btn-primary" onclick="openHookEditor()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            <span data-i18n="addHook">添加 Hook</span>
+                        </button>
+                    </div>
+                    <div id="hooksList" class="config-list"></div>
+                </section>
+
+                <!-- MCP Servers Section -->
+                <section class="config-section">
+                    <div class="config-section-header">
+                        <h3 class="config-section-title" data-i18n="mcpServersConfig">MCP 服务器</h3>
+                        <button class="btn btn-primary" onclick="openMCPServerEditor()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            <span data-i18n="addMCPServer">添加 MCP 服务器</span>
+                        </button>
+                    </div>
+                    <div id="mcpServersList" class="config-list"></div>
+                </section>
+
+                <!-- Templates Section -->
+                <section class="config-section">
+                    <div class="config-section-header">
+                        <h3 class="config-section-title" data-i18n="hookTemplates">Hook 模板库</h3>
+                    </div>
+                    <div id="templatesList" class="templates-container"></div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Hook Editor Modal -->
+        <div id="hookEditorModal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="hookEditorTitle" data-i18n="addHook">添加 Hook</h3>
+                    <button class="modal-close" onclick="closeHookEditor()">&times;</button>
+                </div>
+                <form id="hookForm" class="modal-body" onsubmit="saveHook(); return false;">
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="hookType">Hook 类型</label>
+                        <select name="type" class="form-select" required>
+                            <option value="PreToolUse">PreToolUse (工具执行前)</option>
+                            <option value="PostToolUse">PostToolUse (工具执行后)</option>
+                            <option value="Stop">Stop (会话结束)</option>
+                            <option value="Notification">Notification (通知)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="matcher">匹配模式</label>
+                        <input type="text" name="matcher" class="form-input" placeholder="Write|Edit" required>
+                        <small class="form-hint" data-i18n="matcherHint">使用 | 分隔多个工具名，支持正则表达式</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="commands">执行命令</label>
+                        <textarea name="commands" class="form-textarea" rows="4" placeholder="每行一个命令" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" name="enabled" checked>
+                            <span data-i18n="enabled">启用</span>
+                        </label>
+                    </div>
+                </form>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeHookEditor()" data-i18n="cancel">取消</button>
+                    <button type="submit" class="btn btn-primary" onclick="saveHook()" data-i18n="save">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MCP Server Editor Modal -->
+        <div id="mcpEditorModal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="mcpEditorTitle" data-i18n="addMCP">添加 MCP 服务器</h3>
+                    <button class="modal-close" onclick="closeMCPServerEditor()">&times;</button>
+                </div>
+                <form id="mcpForm" class="modal-body" onsubmit="saveMCPServer(); return false;">
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="serverName">服务器名称</label>
+                        <input type="text" name="name" class="form-input" placeholder="my-mcp-server" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="transportType">传输类型</label>
+                        <select id="mcpTransport" name="transport" class="form-select" onchange="onTransportTypeChange()" required>
+                            <option value="stdio">stdio (命令行)</option>
+                            <option value="sse">SSE (Server-Sent Events)</option>
+                            <option value="http">HTTP</option>
+                        </select>
+                    </div>
+                    <div id="stdioFields">
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="command">命令</label>
+                            <input type="text" name="command" class="form-input" placeholder="npx -y @modelcontextprotocol/server-filesystem">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="args">参数</label>
+                            <textarea name="args" class="form-textarea" rows="2" placeholder="每行一个参数"></textarea>
+                        </div>
+                    </div>
+                    <div id="httpFields" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="url">URL</label>
+                            <input type="text" name="url" class="form-input" placeholder="http://localhost:3000/sse">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="envVars">环境变量</label>
+                        <div id="mcpEnvContainer" class="env-vars-container"></div>
+                        <button type="button" class="add-env-btn" onclick="addEnvVarRow()">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            <span data-i18n="addEnvVar">添加环境变量</span>
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" name="enabled" checked>
+                            <span data-i18n="enabled">启用</span>
+                        </label>
+                    </div>
+                </form>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeMCPServerEditor()" data-i18n="cancel">取消</button>
+                    <button type="submit" class="btn btn-primary" onclick="saveMCPServer()" data-i18n="save">保存</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Create Document Modal -->
         <div id="createDocModal" class="modal" style="display: none;">
             <div class="modal-content" style="max-width: 450px;">
@@ -970,6 +1144,7 @@
     <script src="./claudemd-generator.js"></script>
     <script src="./conversation.js"></script>
     <script src="./continuity.js"></script>
+    <script src="./plugin-studio.js"></script>
     <script src="./resizer.js"></script>
 </body>
 </html>

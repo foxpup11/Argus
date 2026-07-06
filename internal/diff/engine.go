@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"agentscope-desktop/internal/session"
+	"argus-desktop/internal/session"
 )
 
 // Engine Git Diff 引擎

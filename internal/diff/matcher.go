@@ -1,7 +1,7 @@
 package diff
 
 import (
-	"agentscope-desktop/internal/session"
+	"argus-desktop/internal/session"
 )
 
 // Matcher 将 diff 文件关联到 Agent 动作

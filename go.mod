@@ -1,4 +1,4 @@
-module agentscope-desktop
+module argus-desktop
 
 go 1.23.0
 

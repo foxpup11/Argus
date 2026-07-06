@@ -33,7 +33,7 @@ assignees: ''
 - OS: [例如 Windows 11, macOS 14, Ubuntu 22.04]
 - Go 版本: [例如 1.21]
 - Wails 版本: [例如 2.12.0]
-- AgentScope 版本: [例如 0.1.0]
+- Argus 版本: [例如 0.5.1]
 
 ## 附加信息
 

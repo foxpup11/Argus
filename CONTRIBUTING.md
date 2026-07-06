@@ -1,12 +1,12 @@
-# Contributing to AgentScope
+# Contributing to Argus
 
-感谢你对 AgentScope 的关注！
+感谢你对 Argus 的关注！
 
 ## 如何贡献
 
 ### 报告 Bug
 
-1. 在 [Issues](https://github.com/foxpup11/agentscope/issues) 中搜索是否已有相同问题
+1. 在 [Issues](https://github.com/foxpup11/argus/issues) 中搜索是否已有相同问题
 2. 如果没有，创建新 Issue，包含：
    - 问题描述
    - 复现步骤
@@ -31,8 +31,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-name/agentscope.git
-cd agentscope
+git clone https://github.com/your-name/argus.git
+cd argus
 
 # 安装依赖
 go mod tidy
@@ -60,7 +60,7 @@ go test ./...
 
 ## 问题反馈
 
-- Issues: https://github.com/foxpup11/agentscope/issues
+- Issues: https://github.com/foxpup11/argus/issues
 - Email: sizhen02621@gmail.com
 
 感谢你的贡献！ 🎉

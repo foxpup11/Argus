@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"agentscope-desktop/internal/llm"
-	"agentscope-desktop/internal/session"
+	"argus-desktop/internal/llm"
+	"argus-desktop/internal/session"
 )
 
 // LLMEnhancer 使用 LLM 增强多会话摘要质量。

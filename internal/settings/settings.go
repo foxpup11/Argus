@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"agentscope-desktop/internal/session"
+	"argus-desktop/internal/session"
 )
 
 // Theme 主题类型
@@ -65,7 +65,7 @@ func NewManager() (*Manager, error) {
 		return nil, err
 	}
 
-	configDir := filepath.Join(homeDir, ".agentscope")
+	configDir := filepath.Join(homeDir, ".argus")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return nil, err
 	}

@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"agentscope-desktop/internal/session"
+	"argus-desktop/internal/session"
 )
 
 // Engine 风险规则引擎

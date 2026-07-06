@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"agentscope-desktop/internal/llm"
-	"agentscope-desktop/internal/session"
-	"agentscope-desktop/internal/session/claude"
+	"argus-desktop/internal/llm"
+	"argus-desktop/internal/session"
+	"argus-desktop/internal/session/claude"
 )
 
 // Engine 会话连续性引擎

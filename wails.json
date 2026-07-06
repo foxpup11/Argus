@@ -1,7 +1,7 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "agentscope-desktop",
-  "outputfilename": "agentscope-desktop",
+  "name": "argus-desktop",
+  "outputfilename": "argus-desktop",
   "frontend:install": "",
   "frontend:build": "",
   "frontend:dev:watcher": "",
@@ -11,7 +11,7 @@
     "email": "sizhen02621@gmail.com"
   },
   "info": {
-    "productName": "AgentScope Desktop",
+    "productName": "Argus",
     "productVersion": "0.5.1",
     "companyName": "sizhen",
     "copyright": "sizhen"

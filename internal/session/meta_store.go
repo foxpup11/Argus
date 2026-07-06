@@ -28,7 +28,7 @@ func NewMetaStore() (*MetaStore, error) {
 	}
 
 	// 确保目录存在
-	configDir := filepath.Join(homeDir, ".agentscope")
+	configDir := filepath.Join(homeDir, ".argus")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return nil, fmt.Errorf("创建配置目录失败: %w", err)
 	}

@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"agentscope-desktop/internal/session"
+	"argus-desktop/internal/session"
 )
 
 // Extractor 从会话中提取任务信息

@@ -1,6 +1,6 @@
 # 二进制文件
-agentscope
-agentscope.exe
+argus
+argus.exe
 *.exe
 *.exe~
 *.dll

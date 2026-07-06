@@ -1,5 +1,5 @@
 // Package export provides session export functionality for generating
-// HTML and Markdown reports from AgentScope sessions.
+// HTML and Markdown reports from Argus sessions.
 package export
 
 import (
@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"agentscope-desktop/internal/session"
+	"argus-desktop/internal/session"
 )
 
 // ExportFormat represents the output format for session export.
@@ -118,7 +118,7 @@ func generateFilename(sess *session.Session, format ExportFormat) string {
 		ext = "txt"
 	}
 
-	return fmt.Sprintf("agentscope-report-%s-%s.%s", timestamp, sessionID, ext)
+	return fmt.Sprintf("argus-report-%s-%s.%s", timestamp, sessionID, ext)
 }
 
 // getDefaultExportDir returns the default directory for exported reports.
@@ -128,5 +128,5 @@ func getDefaultExportDir() (string, error) {
 		return "", fmt.Errorf("failed to get user home directory: %w", err)
 	}
 
-	return filepath.Join(homeDir, "AgentScope", "reports"), nil
+	return filepath.Join(homeDir, "Argus", "reports"), nil
 }

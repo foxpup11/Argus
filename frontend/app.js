@@ -70,6 +70,7 @@ function switchTab(tab) {
     document.getElementById('sessionsPanel').classList.toggle('active', tab === 'sessions');
     document.getElementById('knowledgePanel').classList.toggle('active', tab === 'knowledge');
     document.getElementById('continuityPanel').classList.toggle('active', tab === 'continuity');
+    document.getElementById('pluginStudioPanel').classList.toggle('active', tab === 'pluginStudio');
 
     // Load data for the selected tab
     if (tab === 'dashboard') {
@@ -81,6 +82,8 @@ function switchTab(tab) {
         loadKnowledgeDocuments();
     } else if (tab === 'continuity') {
         initContinuity();
+    } else if (tab === 'pluginStudio') {
+        initPluginStudio();
     }
 }
 

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"agentscope-desktop/internal/session"
+	"argus-desktop/internal/session"
 )
 
 // Reader 解析 Claude Code 会话日志
