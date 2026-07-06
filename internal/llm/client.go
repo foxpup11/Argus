@@ -49,13 +49,18 @@ func PresetProviders() map[string]ProviderConfig {
 	}
 }
 
-// ResolveAPIType 根据 provider key 推导 API 类型。
-func ResolveAPIType(provider string) APIType {
+// ResolveAPIType 根据 provider 和 baseURL 自动推导 API 类型。
+// 如果 provider 是已知预设则返回预设类型，否则根据 baseURL 中是否包含 "anthropic" 判断。
+func ResolveAPIType(provider string, baseURL string) APIType {
 	presets := PresetProviders()
 	if cfg, ok := presets[provider]; ok {
 		return cfg.APIType
 	}
-	return APITypeOpenAI // custom 默认 OpenAI 兼容
+	// 根据 URL 自动检测
+	if strings.Contains(strings.ToLower(baseURL), "anthropic") {
+		return APITypeAnthropic
+	}
+	return APITypeOpenAI
 }
 
 // ChatMessage represents a single message in a chat completion request.

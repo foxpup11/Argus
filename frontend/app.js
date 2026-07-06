@@ -521,8 +521,8 @@ function renderSettings() {
     document.querySelectorAll('.theme-btn').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-theme') === currentSettings.theme);
     });
-    // renderLLMConfig() removed - LLM config is not in the Settings Modal
     renderCustomRules();
+    renderSettingsLLMConfig();
 }
 
 async function setTheme(theme) {
@@ -540,92 +540,80 @@ async function setTheme(theme) {
 }
 
 // ==============================
-// LLM 配置相关函数
+// LLM 配置（设置面板）
 // ==============================
 
-function renderLLMConfig() {
-    if (!currentSettings) return;
-    // 通过 GetLLMConfig API 获取当前配置
+function renderSettingsLLMConfig() {
     window.go.main.App.GetLLMConfig().then(cfg => {
         if (cfg) {
-            document.getElementById('llmEnabled').checked = cfg.enabled || false;
-            document.getElementById('llmProvider').value = cfg.provider || 'mimo';
-            document.getElementById('llmAPIKey').value = cfg.apiKey || '';
-            document.getElementById('llmBaseURL').value = cfg.baseUrl || '';
-            document.getElementById('llmModel').value = cfg.model || '';
+            document.getElementById('settingsLLMEnabled').checked = cfg.enabled || false;
+            document.getElementById('settingsLLMProviderName').value = cfg.provider || '';
+            document.getElementById('settingsLLMAPIKey').value = cfg.apiKey || '';
+            document.getElementById('settingsLLMBaseURL').value = cfg.baseUrl || '';
+            document.getElementById('settingsLLMModel').value = cfg.model || '';
         }
-        onLLMEnabledChange();
+        onSettingsLLMEnabledChange();
     }).catch(err => {
         console.error('Failed to load LLM config:', err);
     });
 }
 
-function onLLMEnabledChange() {
-    var enabled = document.getElementById('llmEnabled').checked;
-    document.getElementById('llmConfigFields').style.display = enabled ? 'block' : 'none';
-    if (enabled) onLLMProviderChange();
+function onSettingsLLMEnabledChange() {
+    var enabled = document.getElementById('settingsLLMEnabled').checked;
+    document.getElementById('settingsLLMConfigFields').style.display = enabled ? 'block' : 'none';
 }
 
-function onLLMProviderChange() {
-    var provider = document.getElementById('llmProvider').value;
-    var isCustom = (provider === 'custom');
-    document.getElementById('llmBaseURLGroup').style.display = isCustom ? 'block' : 'none';
-
-    // 预设模型和端点
-    var presets = {
-        'mimo':     { model: 'MiniMax-M2.5',   baseUrl: 'https://api.xiaomimimo.com/anthropic' },
-        'deepseek': { model: 'deepseek-chat',   baseUrl: 'https://api.deepseek.com/v1' }
-    };
-
-    if (presets[provider]) {
-        var modelEl = document.getElementById('llmModel');
-        var baseEl = document.getElementById('llmBaseURL');
-        if (!modelEl.value || modelEl.value === '') {
-            modelEl.value = presets[provider].model;
-        }
-        baseEl.value = presets[provider].baseUrl;
+function toggleLLMEye(inputId, btn) {
+    var input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.querySelector('.eye-open').style.display = 'none';
+        btn.querySelector('.eye-closed').style.display = '';
+    } else {
+        input.type = 'password';
+        btn.querySelector('.eye-open').style.display = '';
+        btn.querySelector('.eye-closed').style.display = 'none';
     }
 }
 
-async function saveLLMConfig() {
-    var provider = document.getElementById('llmProvider').value;
-    var apiKey = document.getElementById('llmAPIKey').value.trim();
-    var baseURL = document.getElementById('llmBaseURL').value.trim();
-    var model = document.getElementById('llmModel').value.trim();
-    var enabled = document.getElementById('llmEnabled').checked;
+async function saveSettingsLLMConfig() {
+    var provider = document.getElementById('settingsLLMProviderName').value.trim();
+    var apiKey = document.getElementById('settingsLLMAPIKey').value.trim();
+    var baseURL = document.getElementById('settingsLLMBaseURL').value.trim();
+    var model = document.getElementById('settingsLLMModel').value.trim();
+    var enabled = document.getElementById('settingsLLMEnabled').checked;
 
     try {
         await window.go.main.App.SaveLLMConfig(provider, apiKey, baseURL, model, enabled);
-        showToast('LLM 配置已保存');
+        showToast(t('llmConfigSaved'));
     } catch (error) {
         console.error('保存LLM配置失败:', error);
-        showToast('保存失败: ' + error);
+        showToast(t('llmConfigFailed') + ': ' + error);
     }
 }
 
-async function testLLMConnection() {
-    var provider = document.getElementById('llmProvider').value;
-    var apiKey = document.getElementById('llmAPIKey').value.trim();
-    var baseURL = document.getElementById('llmBaseURL').value.trim();
-    var model = document.getElementById('llmModel').value.trim();
-    var resultEl = document.getElementById('llmTestResult');
+async function testSettingsLLMConnection() {
+    var provider = document.getElementById('settingsLLMProviderName').value.trim();
+    var apiKey = document.getElementById('settingsLLMAPIKey').value.trim();
+    var baseURL = document.getElementById('settingsLLMBaseURL').value.trim();
+    var model = document.getElementById('settingsLLMModel').value.trim();
+    var resultEl = document.getElementById('settingsLLMTestResult');
 
     if (!apiKey) {
-        showToast('请先输入 API Key');
+        showToast(t('llmEnterAPIKey'));
         return;
     }
 
-    resultEl.style.display = 'block';
-    resultEl.textContent = '测试中...';
-    resultEl.style.color = 'var(--text-secondary)';
+    resultEl.className = 'llm-test-result loading';
+    resultEl.textContent = t('llmTesting');
 
     try {
         await window.go.main.App.TestLLMConnection(provider, apiKey, baseURL, model);
-        resultEl.textContent = '连接测试成功!';
-        resultEl.style.color = 'var(--green, #22c55e)';
+        resultEl.className = 'llm-test-result success';
+        resultEl.textContent = t('llmTestSuccess');
     } catch (error) {
-        resultEl.textContent = '连接失败: ' + error;
-        resultEl.style.color = 'var(--red, #ef4444)';
+        resultEl.className = 'llm-test-result error';
+        resultEl.textContent = t('llmTestFailed') + ': ' + error;
     }
 }
 

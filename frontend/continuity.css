@@ -682,32 +682,6 @@
     50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.1); }
 }
 
-/* ============================================
-   LLM Settings Button
-   ============================================ */
-
-.btn-llm-settings {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 6px;
-    background: var(--bg-secondary, #f9fafb);
-    color: var(--text-secondary, #6b7280);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: auto;
-}
-
-.btn-llm-settings:hover {
-    background: var(--primary-light, #eff6ff);
-    border-color: var(--primary-color, #3b82f6);
-    color: var(--primary-color, #3b82f6);
-}
-
 /* 提示/警告消息 */
 .continuity-toast {
     position: fixed;
@@ -792,93 +766,8 @@
 }
 
 /* ============================================
-   LLM Config Modal
+   LLM Config (Settings Panel)
    ============================================ */
-
-.llm-modal-content {
-    background: var(--bg-primary, #ffffff);
-    border-radius: 16px;
-    width: 90%;
-    max-width: 440px;
-    max-height: 85vh;
-    overflow: hidden;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
-    transform: translateY(12px) scale(0.98);
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.modal.show .llm-modal-content {
-    transform: translateY(0) scale(1);
-}
-
-.llm-modal-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 20px 24px 16px;
-}
-
-.llm-modal-header-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, var(--accent, #0d6efd), #8b5cf6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.llm-modal-header-icon svg {
-    width: 18px;
-    height: 18px;
-    color: #fff;
-}
-
-.llm-modal-header-text {
-    flex: 1;
-    min-width: 0;
-}
-
-.llm-modal-header-text h2 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary, #1a1a1a);
-    margin: 0;
-    line-height: 1.3;
-}
-
-.llm-modal-header-text p {
-    font-size: 12px;
-    color: var(--text-secondary, #6c757d);
-    margin: 2px 0 0;
-    line-height: 1.4;
-}
-
-.llm-modal-close {
-    width: 30px;
-    height: 30px;
-    border: none;
-    background: var(--bg-tertiary, #f1f3f5);
-    border-radius: 8px;
-    font-size: 16px;
-    color: var(--text-secondary, #6c757d);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s ease;
-    flex-shrink: 0;
-}
-
-.llm-modal-close:hover {
-    background: var(--bg-hover, #e9ecef);
-    color: var(--text-primary, #1a1a1a);
-}
-
-.llm-modal-body {
-    padding: 0 24px 24px;
-}
 
 /* Toggle Row */
 .llm-enable-row {

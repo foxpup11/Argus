@@ -313,6 +313,23 @@ const i18n = {
         edit: '编辑',
         delete: '删除',
         enable: '启用',
+
+        // LLM 配置（设置面板）
+        llmProviderSection: 'LLM 服务商',
+        llmEnabled: '启用 LLM 增强',
+        llmProviderName: '供应商名称',
+        llmBaseURL: '请求地址',
+        llmAPIKey: 'API Key',
+        llmModel: '模型',
+        llmSaveConfig: '保存配置',
+        llmTestConnection: '测试连接',
+        llmTestSuccess: '连接测试成功',
+        llmTestFailed: '连接失败',
+        llmConfigSaved: 'LLM 配置已保存',
+        llmConfigFailed: '保存失败',
+        llmEnterAPIKey: '请先输入 API Key',
+        llmTesting: '测试中...',
+        llmProviderHint: '填写兼容 OpenAI 或 Claude API 的服务商端点地址',
     },
     en: {
         // Header
@@ -627,6 +644,23 @@ const i18n = {
         edit: 'Edit',
         delete: 'Delete',
         enable: 'Enable',
+
+        // LLM Config (Settings)
+        llmProviderSection: 'LLM Provider',
+        llmEnabled: 'Enable LLM Enhancement',
+        llmProviderName: 'Provider Name',
+        llmBaseURL: 'Request URL',
+        llmAPIKey: 'API Key',
+        llmModel: 'Model',
+        llmSaveConfig: 'Save Config',
+        llmTestConnection: 'Test Connection',
+        llmTestSuccess: 'Connection test passed',
+        llmTestFailed: 'Connection failed',
+        llmConfigSaved: 'LLM config saved',
+        llmConfigFailed: 'Save failed',
+        llmEnterAPIKey: 'Please enter API Key first',
+        llmTesting: 'Testing...',
+        llmProviderHint: 'Enter a URL compatible with OpenAI or Claude API',
     }
 };
 

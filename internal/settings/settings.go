@@ -22,9 +22,9 @@ const (
 
 // LLMConfig 大模型配置
 type LLMConfig struct {
-	Provider string `json:"provider"` // 预设提供商: "mimo", "deepseek", "custom"
+	Provider string `json:"provider"` // 用户自定义提供商名称
 	APIKey   string `json:"apiKey"`   // 用户 API Key
-	BaseURL  string `json:"baseUrl"`  // API 端点
+	BaseURL  string `json:"baseUrl"`  // 请求地址
 	Model    string `json:"model"`    // 模型名
 	Enabled  bool   `json:"enabled"`  // 是否启用
 }

@@ -158,7 +158,7 @@ func (a *App) startup(ctx context.Context) {
 				APIKey:  cfg.APIKey,
 				BaseURL: cfg.BaseURL,
 				Model:   cfg.Model,
-				APIType: llm.ResolveAPIType(cfg.Provider),
+				APIType: llm.ResolveAPIType(cfg.Provider, cfg.BaseURL),
 				Enabled: cfg.Enabled,
 			}
 		}
@@ -762,7 +762,7 @@ func (a *App) SaveLLMConfig(provider, apiKey, baseURL, model string, enabled boo
 			APIKey:  actualKey,
 			BaseURL: baseURL,
 			Model:   model,
-		APIType: llm.ResolveAPIType(provider),
+			APIType: llm.ResolveAPIType(provider, baseURL),
 			Enabled: enabled,
 		}
 	}
@@ -796,7 +796,7 @@ func (a *App) TestLLMConnection(provider, apiKey, baseURL, model string) error {
 		APIKey:  actualKey,
 		BaseURL: baseURL,
 		Model:   model,
-		APIType: llm.ResolveAPIType(provider),
+		APIType: llm.ResolveAPIType(provider, baseURL),
 		Enabled: true,
 	})
 
