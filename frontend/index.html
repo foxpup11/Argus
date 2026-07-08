@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="./conversation.css">
     <link rel="stylesheet" href="./continuity.css">
     <link rel="stylesheet" href="./plugin-studio.css">
+    <link rel="stylesheet" href="./compliance.css">
     <link rel="stylesheet" href="./splash.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script>
@@ -54,7 +55,7 @@
                         <path d="M2 17l10 5 10-5"/>
                         <path d="M2 12l10 5 10-5"/>
                     </svg>
-                    <span data-i18n="dashboard">费用概览</span>
+                    <span data-i18n="dashboard">仪表盘</span>
                 </button>
                 <button class="nav-tab" data-tab="sessions" onclick="switchTab('sessions')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -539,10 +540,7 @@
 
                     <!-- 类型筛选 -->
                     <div class="knowledge-filters">
-                        <button class="filter-btn active" data-type="all" onclick="filterByType('all')">
-                            <span data-i18n="all">全部</span>
-                        </button>
-                        <button class="filter-btn" data-type="plans" onclick="filterByType('plans')">
+                        <button class="filter-btn active" data-type="plans" onclick="filterByType('plans')">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                 <polyline points="14 2 14 8 20 8"/>
@@ -588,6 +586,13 @@
                             <span id="knowledgeDocType" class="doc-type-badge"></span>
                         </div>
                         <div class="toolbar-right">
+                            <button id="knowledgeAuditBtn" class="btn btn-sm" onclick="openKnowledgeComplianceAudit()" style="display: none;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 11l3 3L22 4"/>
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                                </svg>
+                                <span data-i18n="complianceAudit">合规审计</span>
+                            </button>
                             <button id="knowledgeEditBtn" class="btn btn-sm" onclick="toggleKnowledgeEdit()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -638,16 +643,54 @@
                                     <div class="section-editor-header">
                                         <span id="sectionEditorTitle" class="section-editor-title"></span>
                                         <div class="section-editor-actions">
-                                            <button class="btn btn-sm" onclick="openGeneratorModal()">
+                                            <button class="btn btn-sm" id="claudeMDEditBtn" onclick="toggleSectionPreview()">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                                 </svg>
-                                                <span data-i18n="generateFromProject">从项目生成</span>
+                                                <span data-i18n="edit">编辑</span>
                                             </button>
                                         </div>
                                     </div>
                                     <div id="sectionEditorContent" class="section-editor-content"></div>
                                     <div id="sectionEditorFooter" class="section-editor-footer"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 合规审计子视图（默认隐藏） -->
+                        <div id="knowledgeComplianceView" class="knowledge-compliance-view" style="display: none;">
+                            <div class="compliance-sub-header">
+                                <button class="btn btn-sm" onclick="closeKnowledgeComplianceAudit()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                                    </svg>
+                                    <span data-i18n="back">返回</span>
+                                </button>
+                                <h3 data-i18n="complianceAudit">合规审计</h3>
+                                <div class="compliance-sub-actions">
+                                    <button id="knowledgeAuditStartBtn" class="audit-btn" onclick="startComplianceAudit()">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                            <polyline points="22 4 12 14.01 9 11.01"/>
+                                        </svg>
+                                        <span data-i18n="startAudit">开始审计</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-secondary" onclick="exportComplianceReport()">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                            <polyline points="7 10 12 15 17 10"/>
+                                            <line x1="12" y1="15" x2="12" y2="3"/>
+                                        </svg>
+                                        <span data-i18n="exportReport">导出报告</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="compliance-sub-content">
+                                <div id="knowledgeAuditResult">
+                                    <div class="audit-empty">
+                                        <p data-i18n="clickAuditHint">点击"开始审计"按钮，LLM 将自动分析 CLAUDE.md 规则并审计所有会话</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -932,6 +975,18 @@
                                     计划 (Plan)
                                 </span>
                             </label>
+                            <label class="radio-label">
+                                <input type="radio" name="docType" value="claudemd" onchange="toggleProjectSelect()">
+                                <span class="radio-text">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                        <line x1="16" y1="13" x2="8" y2="13"/>
+                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                    </svg>
+                                    CLAUDE.md
+                                </span>
+                            </label>
                         </div>
                     </div>
                     <div id="projectSelectGroup" class="form-group">
@@ -1123,6 +1178,7 @@
     <script src="./conversation.js"></script>
     <script src="./continuity.js"></script>
     <script src="./plugin-studio.js"></script>
+    <script src="./compliance.js"></script>
     <script src="./resizer.js"></script>
 </body>
 </html>

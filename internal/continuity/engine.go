@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"argus-desktop/internal/common"
 	"argus-desktop/internal/llm"
 	"argus-desktop/internal/session"
 	"argus-desktop/internal/session/claude"
@@ -458,22 +459,7 @@ func (e *Engine) loadProjectSessions(projectDir string) ([]*session.Session, err
 
 // formatProjectDirName 将项目目录名转换为可读的名称
 func formatProjectDirName(dirName string) string {
-	name := strings.TrimPrefix(dirName, "-")
-	parts := strings.Split(name, "-")
-	var filtered []string
-	for _, p := range parts {
-		if p != "" {
-			filtered = append(filtered, p)
-		}
-	}
-
-	if len(filtered) >= 2 {
-		return filtered[len(filtered)-2] + "-" + filtered[len(filtered)-1]
-	}
-	if len(filtered) == 1 {
-		return filtered[0]
-	}
-	return name
+	return common.FormatProjectName(dirName)
 }
 
 // ProjectInfo 项目信息

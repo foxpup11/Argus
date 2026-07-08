@@ -7,9 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 	"time"
+
+	"argus-desktop/internal/common"
 )
 
 type Engine struct {
@@ -121,7 +122,7 @@ func (e *Engine) scanAll() (*TokenOverview, error) {
 			tokens := rec.InputTokens + rec.OutputTokens
 			pStats, ok := projectMap[entry.Name()]
 			if !ok {
-				pStats = &ProjectStats{ProjectDir: entry.Name(), ProjectName: formatProjectName(entry.Name())}
+				pStats = &ProjectStats{ProjectDir: entry.Name(), ProjectName: common.FormatProjectName(entry.Name())}
 				projectMap[entry.Name()] = pStats
 			}
 			pStats.SessionCount++
@@ -282,16 +283,4 @@ func (e *Engine) parseJSONL(path, projectDirName string) (*sessionRecord, error)
 		return nil, nil
 	}
 	return rec, nil
-}
-
-func formatProjectName(dirName string) string {
-	name := strings.TrimPrefix(dirName, "-")
-	parts := strings.Split(name, "-")
-	if len(parts) >= 2 {
-		return parts[len(parts)-2] + "-" + parts[len(parts)-1]
-	}
-	if len(parts) > 0 {
-		return parts[0]
-	}
-	return name
 }

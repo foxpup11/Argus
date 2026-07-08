@@ -2,6 +2,7 @@ package risk
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 
 	"argus-desktop/internal/session"
@@ -17,6 +18,7 @@ type Rule struct {
 	Name        string
 	Description string
 	Level       session.RiskLevel
+	Priority    int // 优先级，数字越小优先级越高
 	Check       func(fc session.FileChange) bool
 }
 
@@ -29,11 +31,12 @@ func NewEngine() *Engine {
 
 func (e *Engine) loadDefaultRules() {
 	e.rules = []Rule{
-		// 🔴 Danger 规则
+		// 🔴 Danger 规则 (优先级 10-19)
 		{
 			Name:        "delete_file",
 			Description: "删除文件（危险操作）",
 			Level:       session.RiskDanger,
+			Priority:    10,
 			Check: func(fc session.FileChange) bool {
 				return fc.ChangeType == session.ChangeDeleted
 			},
@@ -42,6 +45,7 @@ func (e *Engine) loadDefaultRules() {
 			Name:        "secret_file",
 			Description: "修改了包含敏感信息的文件",
 			Level:       session.RiskDanger,
+			Priority:    11,
 			Check: func(fc session.FileChange) bool {
 				patterns := []string{"secret", "password", "api_key", "apikey", "token", "credential", ".env", "key"}
 				lower := strings.ToLower(fc.Path)
@@ -57,6 +61,7 @@ func (e *Engine) loadDefaultRules() {
 			Name:        "dangerous_command",
 			Description: "执行了危险的 shell 命令",
 			Level:       session.RiskDanger,
+			Priority:    12,
 			Check: func(fc session.FileChange) bool {
 				for _, action := range fc.Actions {
 					if action.Type != session.ActionBash {
@@ -77,6 +82,7 @@ func (e *Engine) loadDefaultRules() {
 			Name:        "large_change",
 			Description: "改动超过 500 行",
 			Level:       session.RiskDanger,
+			Priority:    13,
 			Check: func(fc session.FileChange) bool {
 				// 计算实际的代码变更行数（以+或-开头，排除+++和---）
 				lines := strings.Split(fc.Diff, "\n")
@@ -95,6 +101,7 @@ func (e *Engine) loadDefaultRules() {
 			Name:        "config_file",
 			Description: "修改了配置文件",
 			Level:       session.RiskDanger,
+			Priority:    14,
 			Check: func(fc session.FileChange) bool {
 				configPatterns := []string{".git/config", "CI", ".github/", ".gitlab-ci", "Jenkinsfile", ".circleci", "docker-compose", "Dockerfile"}
 				for _, p := range configPatterns {
@@ -106,11 +113,12 @@ func (e *Engine) loadDefaultRules() {
 			},
 		},
 
-		// 🟡 Review 规则
+		// 🟡 Review 规则 (优先级 20-29)
 		{
 			Name:        "large_deletion",
 			Description: "删除超过 50 行代码",
 			Level:       session.RiskReview,
+			Priority:    20,
 			Check: func(fc session.FileChange) bool {
 				if fc.ChangeType != session.ChangeDeleted {
 					return false
@@ -129,6 +137,7 @@ func (e *Engine) loadDefaultRules() {
 			Name:        "multiple_edits",
 			Description: "同一个文件被多次编辑",
 			Level:       session.RiskReview,
+			Priority:    21,
 			Check: func(fc session.FileChange) bool {
 				editCount := 0
 				for _, action := range fc.Actions {
@@ -143,6 +152,7 @@ func (e *Engine) loadDefaultRules() {
 			Name:        "dependency_file",
 			Description: "修改了依赖文件",
 			Level:       session.RiskReview,
+			Priority:    22,
 			Check: func(fc session.FileChange) bool {
 				depPatterns := []string{"go.mod", "go.sum", "package.json", "package-lock.json", "yarn.lock", "requirements.txt", "Cargo.toml", "Cargo.lock"}
 				for _, p := range depPatterns {
@@ -157,6 +167,7 @@ func (e *Engine) loadDefaultRules() {
 			Name:        "test_file",
 			Description: "修改了测试文件",
 			Level:       session.RiskReview,
+			Priority:    23,
 			Check: func(fc session.FileChange) bool {
 				testPatterns := []string{"_test.go", ".test.", ".spec.", "test/", "tests/"}
 				for _, p := range testPatterns {
@@ -168,11 +179,12 @@ func (e *Engine) loadDefaultRules() {
 			},
 		},
 
-		// 🟢 Safe 规则
+		// 🟢 Safe 规则 (优先级 30-39)
 		{
 			Name:        "new_file",
 			Description: "新增文件（纯添加）",
 			Level:       session.RiskSafe,
+			Priority:    30,
 			Check: func(fc session.FileChange) bool {
 				return fc.ChangeType == session.ChangeCreated
 			},
@@ -181,6 +193,7 @@ func (e *Engine) loadDefaultRules() {
 			Name:        "small_change",
 			Description: "小改动（< 20 行）",
 			Level:       session.RiskSafe,
+			Priority:    31,
 			Check: func(fc session.FileChange) bool {
 				lines := strings.Split(fc.Diff, "\n")
 				changes := 0
@@ -198,6 +211,7 @@ func (e *Engine) loadDefaultRules() {
 			Name:        "doc_change",
 			Description: "只修改了文档/注释",
 			Level:       session.RiskSafe,
+			Priority:    32,
 			Check: func(fc session.FileChange) bool {
 				docPatterns := []string{".md", ".txt", ".rst", "README", "CHANGELOG", "LICENSE"}
 				for _, p := range docPatterns {
@@ -209,6 +223,11 @@ func (e *Engine) loadDefaultRules() {
 			},
 		},
 	}
+
+	// 按优先级排序规则
+	sort.Slice(e.rules, func(i, j int) bool {
+		return e.rules[i].Priority < e.rules[j].Priority
+	})
 }
 
 // Evaluate 评估文件改动的风险等级

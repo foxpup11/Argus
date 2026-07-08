@@ -3,6 +3,7 @@ package knowledge
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -71,6 +72,12 @@ func (e *Engine) readGlobalClaudeMD() (*KnowledgeDoc, error) {
 
 // scanProjectClaudeMD 扫描所有项目的 CLAUDE.md
 func (e *Engine) scanProjectClaudeMD() ([]KnowledgeDoc, error) {
+	// 刷新项目根目录缓存，确保后续保存操作可以访问这些目录
+	if err := e.RefreshProjectRoots(); err != nil {
+		// 刷新失败不影响扫描，继续执行
+		fmt.Printf("警告：刷新项目根目录缓存失败: %v\n", err)
+	}
+
 	projectsDir := filepath.Join(e.homeDir, ".claude", "projects")
 
 	entries, err := os.ReadDir(projectsDir)

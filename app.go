@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"argus-desktop/internal/analytics"
+	"argus-desktop/internal/common"
+	"argus-desktop/internal/compliance"
 	"argus-desktop/internal/continuity"
 	"argus-desktop/internal/diff"
 	"argus-desktop/internal/export"
@@ -31,15 +33,22 @@ import (
 
 // App struct
 type App struct {
-	ctx         context.Context
-	monitor     *monitor.Monitor
-	monitorMu   sync.RWMutex // 保护 monitor 字段的并发访问
-	settingsMgr *settings.Manager
-	analytics   *analytics.Engine
-	metaStore   *session.MetaStore
-	knowledge   *knowledge.Engine
-	continuity  *continuity.Engine
-	plugin      *plugin.Engine
+	ctx          context.Context
+	monitor      *monitor.Monitor
+	monitorMu    sync.RWMutex // 保护 monitor 字段的并发访问
+	settingsMgr  *settings.Manager
+	analytics    *analytics.Engine
+	metaStore    *session.MetaStore
+	knowledge    *knowledge.Engine
+	continuity   *continuity.Engine
+	continuityMu sync.RWMutex // 保护 continuity 字段的并发访问
+	plugin       *plugin.Engine
+	llmCfg       *llm.ProviderConfig // LLM 配置（用于合规审计）
+
+	// 会话缓存
+	sessionCache     []SessionInfo
+	sessionCacheMu   sync.RWMutex
+	sessionCacheTime time.Time
 }
 
 // SessionInfo 会话简要信息（用于列表展示）
@@ -163,11 +172,14 @@ func (a *App) startup(ctx context.Context) {
 			}
 		}
 	}
+	a.llmCfg = llmCfg // 保存 LLM 配置供合规审计使用
 	continuityEngine, err := continuity.NewEngine(llmCfg)
 	if err != nil {
 		log.Printf("WARN: 会话连续性引擎初始化失败: %v", err)
 	} else {
+		a.continuityMu.Lock()
 		a.continuity = continuityEngine
+		a.continuityMu.Unlock()
 	}
 
 	// 初始化插件工作室引擎
@@ -205,7 +217,11 @@ func (a *App) GetSessions() ([]SessionInfo, error) {
 		}
 
 		projectDir := filepath.Join(claudeDir, entry.Name())
-		jsonlFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		jsonlFiles, err := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		if err != nil {
+			log.Printf("WARN: 查找会话文件失败 %s: %v", projectDir, err)
+			continue
+		}
 
 		for _, jsonlPath := range jsonlFiles {
 			reader := claude.NewReader()
@@ -239,26 +255,38 @@ func (a *App) GetSessions() ([]SessionInfo, error) {
 // formatProjectName 将项目目录名转换为可读的项目名称
 // 例如: "-g-ltch-git-learn-argus-desktop" -> "argus-desktop"
 func formatProjectName(dirName string) string {
-	// 去掉开头的连字符
-	name := strings.TrimPrefix(dirName, "-")
+	return common.FormatProjectName(dirName)
+}
 
-	// 过滤空字符串并取最后两个段
-	parts := strings.Split(name, "-")
-	var filtered []string
-	for _, p := range parts {
-		if p != "" {
-			filtered = append(filtered, p)
-		}
+// getCachedSessions 获取缓存的会话列表，如果缓存过期则重新加载
+func (a *App) getCachedSessions() ([]SessionInfo, error) {
+	a.sessionCacheMu.RLock()
+	// 缓存有效期 5 分钟
+	if time.Since(a.sessionCacheTime) < 5*time.Minute && a.sessionCache != nil {
+		defer a.sessionCacheMu.RUnlock()
+		return a.sessionCache, nil
+	}
+	a.sessionCacheMu.RUnlock()
+
+	// 重新加载
+	sessions, err := a.GetSessions()
+	if err != nil {
+		return nil, err
 	}
 
-	if len(filtered) >= 2 {
-		return filtered[len(filtered)-2] + "-" + filtered[len(filtered)-1]
-	}
-	if len(filtered) == 1 {
-		return filtered[0]
-	}
+	a.sessionCacheMu.Lock()
+	a.sessionCache = sessions
+	a.sessionCacheTime = time.Now()
+	a.sessionCacheMu.Unlock()
 
-	return name
+	return sessions, nil
+}
+
+// invalidateSessionCache 清除会话缓存（在会话变更时调用）
+func (a *App) invalidateSessionCache() {
+	a.sessionCacheMu.Lock()
+	a.sessionCache = nil
+	a.sessionCacheMu.Unlock()
 }
 
 // GetAllProjectDirs 获取所有有会话的项目目录名（共享逻辑，与会话列表保持一致）
@@ -286,7 +314,11 @@ func GetAllProjectDirs() ([]string, error) {
 
 		// 只返回有会话文件的项目（与 GetSessions 保持一致）
 		projectDir := filepath.Join(claudeDir, entry.Name())
-		jsonlFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		jsonlFiles, err := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		if err != nil {
+			log.Printf("WARN: 查找会话文件失败 %s: %v", projectDir, err)
+			continue
+		}
 		if len(jsonlFiles) > 0 {
 			projects = append(projects, entry.Name())
 		}
@@ -297,6 +329,10 @@ func GetAllProjectDirs() ([]string, error) {
 
 // GetSession 获取单个会话详情
 func (a *App) GetSession(id string) (*SessionDetail, error) {
+	if id == "" {
+		return nil, fmt.Errorf("会话 ID 不能为空")
+	}
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("获取用户目录失败: %w", err)
@@ -312,7 +348,11 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 			continue
 		}
 		projectDir := filepath.Join(claudeDir, entry.Name())
-		jsonlFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		jsonlFiles, err := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		if err != nil {
+			log.Printf("WARN: 查找会话文件失败 %s: %v", projectDir, err)
+			continue
+		}
 		for _, jsonlPath := range jsonlFiles {
 			if filepath.Base(jsonlPath) == id+".jsonl" || filepath.Base(jsonlPath) == id {
 				sessionPath = jsonlPath
@@ -449,6 +489,10 @@ func (a *App) GetSession(id string) (*SessionDetail, error) {
 
 // GetSessionMessages 获取会话的完整消息历史
 func (a *App) GetSessionMessages(sessionID string) ([]session.Message, error) {
+	if sessionID == "" {
+		return nil, fmt.Errorf("会话 ID 不能为空")
+	}
+
 	sess, err := a.getSessionByID(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("获取会话失败: %w", err)
@@ -458,6 +502,13 @@ func (a *App) GetSessionMessages(sessionID string) ([]session.Message, error) {
 
 // GetDiff 获取指定文件的 diff
 func (a *App) GetDiff(sessionID, filePath string) (string, error) {
+	if sessionID == "" {
+		return "", fmt.Errorf("会话 ID 不能为空")
+	}
+	if filePath == "" {
+		return "", fmt.Errorf("文件路径不能为空")
+	}
+
 	// 如果文件路径是绝对路径，使用文件所在目录查找 Git 仓库
 	if filepath.IsAbs(filePath) {
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -492,7 +543,11 @@ func (a *App) GetDiff(sessionID, filePath string) (string, error) {
 			continue
 		}
 		projectDir := filepath.Join(claudeDir, entry.Name())
-		jsonlFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		jsonlFiles, err := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		if err != nil {
+			log.Printf("WARN: 查找会话文件失败 %s: %v", projectDir, err)
+			continue
+		}
 		for _, jsonlPath := range jsonlFiles {
 			if filepath.Base(jsonlPath) == sessionID+".jsonl" || filepath.Base(jsonlPath) == sessionID {
 				sessionPath = jsonlPath
@@ -552,6 +607,10 @@ func (a *App) GetDiff(sessionID, filePath string) (string, error) {
 // GetSessionDiff 获取会话的 diff（支持多种对比模式）
 // mode: "uncommitted" 获取未提交的改动, "session" 获取会话前后对比
 func (a *App) GetSessionDiff(sessionID string, mode DiffMode) (*DiffInfo, error) {
+	if sessionID == "" {
+		return nil, fmt.Errorf("会话 ID 不能为空")
+	}
+
 	// 获取会话数据
 	sess, err := a.getSessionByID(sessionID)
 	if err != nil {
@@ -768,7 +827,9 @@ func (a *App) SaveLLMConfig(provider, apiKey, baseURL, model string, enabled boo
 	}
 
 	var err error
+	a.continuityMu.Lock()
 	a.continuity, err = continuity.NewEngine(llmCfg)
+	a.continuityMu.Unlock()
 	if err != nil {
 		return fmt.Errorf("重建连续性引擎失败: %w", err)
 	}
@@ -829,9 +890,13 @@ func (a *App) GetPresetProviders() map[string]map[string]string {
 
 // maskAPIKeyForDisplay 脱敏显示 API Key
 func maskAPIKeyForDisplay(key string) string {
+	if len(key) == 0 {
+		return ""
+	}
 	if len(key) <= 8 {
 		return "***"
 	}
+	// 保留前 4 位和后 4 位，中间用 *** 替换
 	return key[:4] + "***" + key[len(key)-4:]
 }
 
@@ -996,7 +1061,11 @@ func (a *App) getSessionByID(id string) (*session.Session, error) {
 			continue
 		}
 		projectDir := filepath.Join(claudeDir, entry.Name())
-		jsonlFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		jsonlFiles, err := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		if err != nil {
+			log.Printf("WARN: 查找会话文件失败 %s: %v", projectDir, err)
+			continue
+		}
 		for _, jsonlPath := range jsonlFiles {
 			// 优化：先通过文件名快速匹配，避免读取所有文件
 			baseName := filepath.Base(jsonlPath)
@@ -1066,8 +1135,8 @@ func (a *App) SearchSessions(keyword string, fields []string, tags []string, fav
 		return nil, fmt.Errorf("元数据存储未初始化")
 	}
 
-	// 获取所有会话
-	sessions, err := a.GetSessions()
+	// 使用缓存的会话列表
+	sessions, err := a.getCachedSessions()
 	if err != nil {
 		return nil, fmt.Errorf("获取会话列表失败: %w", err)
 	}
@@ -1116,11 +1185,19 @@ func (a *App) GetSessionMeta(sessionID string) (*session.SessionMeta, error) {
 
 // SetSessionFavorite 设置会话收藏状态
 func (a *App) SetSessionFavorite(sessionID string, favorited bool) error {
+	if sessionID == "" {
+		return fmt.Errorf("会话 ID 不能为空")
+	}
+
 	if a.metaStore == nil {
 		return fmt.Errorf("元数据存储未初始化")
 	}
 
-	return a.metaStore.SetFavorite(sessionID, favorited)
+	err := a.metaStore.SetFavorite(sessionID, favorited)
+	if err == nil {
+		a.invalidateSessionCache()
+	}
+	return err
 }
 
 // GetFavoriteSessions 获取所有收藏的会话 ID
@@ -1134,20 +1211,42 @@ func (a *App) GetFavoriteSessions() ([]string, error) {
 
 // AddSessionTag 为会话添加标签
 func (a *App) AddSessionTag(sessionID, tag string) error {
+	if sessionID == "" {
+		return fmt.Errorf("会话 ID 不能为空")
+	}
+	if tag == "" {
+		return fmt.Errorf("标签名不能为空")
+	}
+
 	if a.metaStore == nil {
 		return fmt.Errorf("元数据存储未初始化")
 	}
 
-	return a.metaStore.AddTag(sessionID, tag)
+	err := a.metaStore.AddTag(sessionID, tag)
+	if err == nil {
+		a.invalidateSessionCache()
+	}
+	return err
 }
 
 // RemoveSessionTag 移除会话标签
 func (a *App) RemoveSessionTag(sessionID, tag string) error {
+	if sessionID == "" {
+		return fmt.Errorf("会话 ID 不能为空")
+	}
+	if tag == "" {
+		return fmt.Errorf("标签名不能为空")
+	}
+
 	if a.metaStore == nil {
 		return fmt.Errorf("元数据存储未初始化")
 	}
 
-	return a.metaStore.RemoveTag(sessionID, tag)
+	err := a.metaStore.RemoveTag(sessionID, tag)
+	if err == nil {
+		a.invalidateSessionCache()
+	}
+	return err
 }
 
 // GetAllTags 获取所有已使用的标签
@@ -1192,15 +1291,27 @@ func (a *App) RemoveCustomTag(name string) error {
 
 // SetSessionNote 设置会话备注
 func (a *App) SetSessionNote(sessionID, note string) error {
+	if sessionID == "" {
+		return fmt.Errorf("会话 ID 不能为空")
+	}
+
 	if a.metaStore == nil {
 		return fmt.Errorf("元数据存储未初始化")
 	}
 
-	return a.metaStore.SetNote(sessionID, note)
+	err := a.metaStore.SetNote(sessionID, note)
+	if err == nil {
+		a.invalidateSessionCache()
+	}
+	return err
 }
 
 // GetSessionNote 获取会话备注
 func (a *App) GetSessionNote(sessionID string) string {
+	if sessionID == "" {
+		return ""
+	}
+
 	if a.metaStore == nil {
 		return ""
 	}
@@ -1307,7 +1418,11 @@ func (a *App) deleteSession(sessionID string) error {
 		jsonlFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
 		for _, jsonlPath := range jsonlFiles {
 			if filepath.Base(jsonlPath) == sessionID+".jsonl" || filepath.Base(jsonlPath) == sessionID {
-				return os.Remove(jsonlPath)
+				err := os.Remove(jsonlPath)
+				if err == nil {
+					a.invalidateSessionCache()
+				}
+				return err
 			}
 		}
 	}
@@ -1433,6 +1548,10 @@ func (a *App) GetKnowledgeProjects() ([]string, error) {
 
 // SaveKnowledgeDocument 保存知识文档
 func (a *App) SaveKnowledgeDocument(path string, content string) error {
+	if path == "" {
+		return fmt.Errorf("文档路径不能为空")
+	}
+
 	if a.knowledge == nil {
 		return fmt.Errorf("知识管理引擎未初始化")
 	}
@@ -1442,6 +1561,10 @@ func (a *App) SaveKnowledgeDocument(path string, content string) error {
 
 // DeleteKnowledgeDocument 删除知识文档
 func (a *App) DeleteKnowledgeDocument(path string) error {
+	if path == "" {
+		return fmt.Errorf("文档路径不能为空")
+	}
+
 	if a.knowledge == nil {
 		return fmt.Errorf("知识管理引擎未初始化")
 	}
@@ -1788,11 +1911,15 @@ type ContinuityQualityInfo struct {
 
 // GetContinuityProjects 获取所有有会话的项目列表
 func (a *App) GetContinuityProjects() ([]ContinuityProjectInfo, error) {
+	a.continuityMu.RLock()
 	if a.continuity == nil {
+		a.continuityMu.RUnlock()
 		return nil, fmt.Errorf("会话连续性引擎未初始化")
 	}
+	continuityEngine := a.continuity
+	a.continuityMu.RUnlock()
 
-	projects, err := a.continuity.GetAvailableProjects()
+	projects, err := continuityEngine.GetAvailableProjects()
 	if err != nil {
 		return nil, err
 	}
@@ -1812,11 +1939,22 @@ func (a *App) GetContinuityProjects() ([]ContinuityProjectInfo, error) {
 
 // GenerateContinuityHandoff 生成会话交接摘要
 func (a *App) GenerateContinuityHandoff(project string, sessionCount int) (*ContinuitySummary, error) {
-	if a.continuity == nil {
-		return nil, fmt.Errorf("会话连续性引擎未初始化")
+	if project == "" {
+		return nil, fmt.Errorf("项目目录名不能为空")
+	}
+	if sessionCount <= 0 {
+		sessionCount = 10 // 默认值
 	}
 
-	summary, err := a.continuity.GenerateHandoff(project, sessionCount)
+	a.continuityMu.RLock()
+	if a.continuity == nil {
+		a.continuityMu.RUnlock()
+		return nil, fmt.Errorf("会话连续性引擎未初始化")
+	}
+	continuityEngine := a.continuity
+	a.continuityMu.RUnlock()
+
+	summary, err := continuityEngine.GenerateHandoff(project, sessionCount)
 	if err != nil {
 		return nil, err
 	}
@@ -1888,74 +2026,119 @@ func (a *App) GenerateContinuityHandoff(project string, sessionCount int) (*Cont
 
 // ExportContinuityToMemory 导出交接摘要到 memory 目录
 func (a *App) ExportContinuityToMemory(project string, sessionCount int) (string, error) {
-	if a.continuity == nil {
-		return "", fmt.Errorf("会话连续性引擎未初始化")
+	if project == "" {
+		return "", fmt.Errorf("项目目录名不能为空")
+	}
+	if sessionCount <= 0 {
+		sessionCount = 10 // 默认值
 	}
 
-	return a.continuity.ExportToMemory(project, sessionCount)
+	a.continuityMu.RLock()
+	if a.continuity == nil {
+		a.continuityMu.RUnlock()
+		return "", fmt.Errorf("会话连续性引擎未初始化")
+	}
+	continuityEngine := a.continuity
+	a.continuityMu.RUnlock()
+
+	return continuityEngine.ExportToMemory(project, sessionCount)
 }
 
 // GenerateContinuityMarkdown 生成 Markdown 格式的交接摘要
 func (a *App) GenerateContinuityMarkdown(project string, sessionCount int) (string, error) {
-	if a.continuity == nil {
-		return "", fmt.Errorf("会话连续性引擎未初始化")
+	if project == "" {
+		return "", fmt.Errorf("项目目录名不能为空")
+	}
+	if sessionCount <= 0 {
+		sessionCount = 10 // 默认值
 	}
 
-	markdown, _, err := a.continuity.GenerateHandoffMarkdown(project, sessionCount)
+	a.continuityMu.RLock()
+	if a.continuity == nil {
+		a.continuityMu.RUnlock()
+		return "", fmt.Errorf("会话连续性引擎未初始化")
+	}
+	continuityEngine := a.continuity
+	a.continuityMu.RUnlock()
+
+	markdown, _, err := continuityEngine.GenerateHandoffMarkdown(project, sessionCount)
 	return markdown, err
 }
 
 // GenerateContinuityPrompt 生成可粘贴的 prompt 片段
 func (a *App) GenerateContinuityPrompt(project string, sessionCount int) (string, error) {
-	if a.continuity == nil {
-		return "", fmt.Errorf("会话连续性引擎未初始化")
+	if project == "" {
+		return "", fmt.Errorf("项目目录名不能为空")
+	}
+	if sessionCount <= 0 {
+		sessionCount = 10 // 默认值
 	}
 
-	prompt, _, err := a.continuity.GenerateHandoffPrompt(project, sessionCount)
+	a.continuityMu.RLock()
+	if a.continuity == nil {
+		a.continuityMu.RUnlock()
+		return "", fmt.Errorf("会话连续性引擎未初始化")
+	}
+	continuityEngine := a.continuity
+	a.continuityMu.RUnlock()
+
+	prompt, _, err := continuityEngine.GenerateHandoffPrompt(project, sessionCount)
 	return prompt, err
 }
 
 // ExportContinuityToMemoryWithData 使用已生成的摘要数据导出到 memory 目录
 // 避免重新调用 LLM，直接使用前端传递的摘要数据
 func (a *App) ExportContinuityToMemoryWithData(project string, summary *ContinuitySummary) (string, error) {
+	a.continuityMu.RLock()
 	if a.continuity == nil {
+		a.continuityMu.RUnlock()
 		return "", fmt.Errorf("会话连续性引擎未初始化")
 	}
+	continuityEngine := a.continuity
+	a.continuityMu.RUnlock()
 
 	// 将前端格式的摘要转换为内部格式
 	handoffSummary := convertToHandoffSummary(summary)
 
 	// 生成 Markdown 并保存
-	markdown := a.continuity.GetHandoffGenerator().GenerateMarkdown(handoffSummary)
-	return a.continuity.GetHandoffGenerator().SaveToMemory(handoffSummary, markdown)
+	markdown := continuityEngine.GetHandoffGenerator().GenerateMarkdown(handoffSummary)
+	return continuityEngine.GetHandoffGenerator().SaveToMemory(handoffSummary, markdown)
 }
 
 // GenerateContinuityMarkdownWithData 使用已生成的摘要数据生成 Markdown
 // 避免重新调用 LLM，直接使用前端传递的摘要数据
 func (a *App) GenerateContinuityMarkdownWithData(project string, summary *ContinuitySummary) (string, error) {
+	a.continuityMu.RLock()
 	if a.continuity == nil {
+		a.continuityMu.RUnlock()
 		return "", fmt.Errorf("会话连续性引擎未初始化")
 	}
+	continuityEngine := a.continuity
+	a.continuityMu.RUnlock()
 
 	// 将前端格式的摘要转换为内部格式
 	handoffSummary := convertToHandoffSummary(summary)
 
 	// 生成 Markdown
-	return a.continuity.GetHandoffGenerator().GenerateMarkdown(handoffSummary), nil
+	return continuityEngine.GetHandoffGenerator().GenerateMarkdown(handoffSummary), nil
 }
 
 // GenerateContinuityPromptWithData 使用已生成的摘要数据生成 Prompt
 // 避免重新调用 LLM，直接使用前端传递的摘要数据
 func (a *App) GenerateContinuityPromptWithData(project string, summary *ContinuitySummary) (string, error) {
+	a.continuityMu.RLock()
 	if a.continuity == nil {
+		a.continuityMu.RUnlock()
 		return "", fmt.Errorf("会话连续性引擎未初始化")
 	}
+	continuityEngine := a.continuity
+	a.continuityMu.RUnlock()
 
 	// 将前端格式的摘要转换为内部格式
 	handoffSummary := convertToHandoffSummary(summary)
 
 	// 生成 Prompt
-	return a.continuity.GetHandoffGenerator().GeneratePrompt(handoffSummary), nil
+	return continuityEngine.GetHandoffGenerator().GeneratePrompt(handoffSummary), nil
 }
 
 // convertToHandoffSummary 将前端格式的摘要转换为内部格式
@@ -2342,4 +2525,236 @@ func (a *App) ValidatePluginSettings(settings *PluginSettingsDTO) ([]ValidationE
 	}
 
 	return result, nil
+}
+
+// ============================================
+// Compliance Audit (合规审计)
+// ============================================
+
+// LogMessage 前端日志输出到终端
+func (a *App) LogMessage(message string) {
+	log.Printf("[前端] %s", message)
+}
+
+// AuditSession 审计单个会话的 CLAUDE.md 规则遵守情况（LLM 驱动）
+func (a *App) AuditSession(sessionID string, claudeMDPath string) (*compliance.ComplianceScore, error) {
+	if a.llmCfg == nil || !a.llmCfg.Enabled || a.llmCfg.APIKey == "" {
+		return nil, fmt.Errorf("LLM 未配置或 API Key 缺失，请先在设置中配置 LLM")
+	}
+
+	// 加载会话
+	sess, err := a.loadSession(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("加载会话失败: %w", err)
+	}
+
+	// 读取 CLAUDE.md 内容
+	claudeMDContent, err := os.ReadFile(claudeMDPath)
+	if err != nil {
+		return nil, fmt.Errorf("读取 CLAUDE.md 失败: %w", err)
+	}
+
+	// 创建审计引擎并执行审计
+	engine := compliance.NewEngine(*a.llmCfg)
+	ctx := context.Background()
+
+	// 提取规则
+	rules, err := engine.ExtractRules(ctx, string(claudeMDContent))
+	if err != nil {
+		return nil, fmt.Errorf("规则提取失败: %w", err)
+	}
+
+	// 审计会话
+	score, err := engine.AuditSession(ctx, rules, sess)
+	if err != nil {
+		return nil, fmt.Errorf("会话审计失败: %w", err)
+	}
+
+	return score, nil
+}
+
+// GetComplianceOverview 获取指定项目的合规概览（LLM 驱动）
+// projectName 为空时审计所有会话，否则只审计该项目的会话
+func (a *App) GetComplianceOverview(claudeMDPath string, projectName string) (*compliance.ComplianceOverview, error) {
+	if a.llmCfg == nil || !a.llmCfg.Enabled || a.llmCfg.APIKey == "" {
+		return nil, fmt.Errorf("LLM 未配置或 API Key 缺失，请先在设置中配置 LLM")
+	}
+
+	log.Printf("GetComplianceOverview: claudeMDPath=%s, projectName=%s", claudeMDPath, projectName)
+
+	// 读取 CLAUDE.md 内容
+	claudeMDContent, err := os.ReadFile(claudeMDPath)
+	if err != nil {
+		log.Printf("读取 CLAUDE.md 失败: %v", err)
+		return nil, fmt.Errorf("读取 CLAUDE.md 失败: %w", err)
+	}
+
+	// 根据项目名获取会话
+	var sessions []*session.Session
+	if projectName != "" {
+		sessions, err = a.getSessionsByProject(projectName)
+	} else {
+		sessions, err = a.getAllSessions()
+	}
+	if err != nil {
+		log.Printf("获取会话列表失败: %v", err)
+		return nil, fmt.Errorf("获取会话列表失败: %w", err)
+	}
+
+	log.Printf("找到 %d 个项目 [%s] 的会话", len(sessions), projectName)
+
+	// 创建审计引擎并获取概览
+	engine := compliance.NewEngine(*a.llmCfg)
+	overview, err := engine.GetComplianceOverview(context.Background(), sessions, string(claudeMDContent))
+	if err != nil {
+		return nil, fmt.Errorf("合规概览获取失败: %w", err)
+	}
+
+	return overview, nil
+}
+
+// getSessionsByProject 获取指定项目的会话
+func (a *App) getSessionsByProject(projectName string) ([]*session.Session, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("获取用户目录失败: %w", err)
+	}
+
+	projectsDir := filepath.Join(homeDir, ".claude", "projects")
+	projectDir := filepath.Join(projectsDir, projectName)
+
+	// 检查项目目录是否存在
+	if _, err := os.Stat(projectDir); os.IsNotExist(err) {
+		log.Printf("项目目录不存在: %s", projectDir)
+		return nil, nil
+	}
+
+	var sessions []*session.Session
+	reader := claude.NewReader()
+
+	jsonlFiles, err := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+	if err != nil {
+		log.Printf("查找会话文件失败 %s: %v", projectDir, err)
+		return nil, err
+	}
+
+	log.Printf("项目 %s: 找到 %d 个会话文件", projectName, len(jsonlFiles))
+
+	for _, jsonlPath := range jsonlFiles {
+		sess, err := reader.Read(jsonlPath)
+		if err != nil {
+			log.Printf("读取会话文件失败 %s: %v", jsonlPath, err)
+			continue
+		}
+		if sess != nil {
+			sessions = append(sessions, sess)
+		}
+	}
+
+	return sessions, nil
+}
+
+// loadSession 加载单个会话
+func (a *App) loadSession(sessionID string) (*session.Session, error) {
+	// 使用 os.UserHomeDir() 获取用户目录
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("获取用户目录失败: %w", err)
+	}
+
+	// 扫描所有项目的会话
+	projectsDir := filepath.Join(homeDir, ".claude", "projects")
+
+	entries, err := os.ReadDir(projectsDir)
+	if err != nil {
+		return nil, fmt.Errorf("读取项目目录失败: %w", err)
+	}
+
+	reader := claude.NewReader()
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		projectDir := filepath.Join(projectsDir, entry.Name())
+		jsonlFiles, err := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		if err != nil {
+			log.Printf("WARN: 查找会话文件失败 %s: %v", projectDir, err)
+			continue
+		}
+
+		for _, jsonlPath := range jsonlFiles {
+			sess, err := reader.Read(jsonlPath)
+			if err != nil {
+				log.Printf("读取会话文件失败 %s: %v", jsonlPath, err)
+				continue
+			}
+
+			if sess != nil && sess.ID == sessionID {
+				return sess, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("未找到会话: %s", sessionID)
+}
+
+// getAllSessions 获取所有会话
+func (a *App) getAllSessions() ([]*session.Session, error) {
+	var sessions []*session.Session
+
+	// 使用 os.UserHomeDir() 获取用户目录
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("获取用户目录失败: %w", err)
+	}
+
+	log.Printf("用户目录: %s", homeDir)
+
+	// 扫描所有项目的会话
+	projectsDir := filepath.Join(homeDir, ".claude", "projects")
+
+	log.Printf("项目目录: %s", projectsDir)
+
+	entries, err := os.ReadDir(projectsDir)
+	if err != nil {
+		log.Printf("读取项目目录失败: %v", err)
+		return nil, fmt.Errorf("读取项目目录失败: %w", err)
+	}
+
+	log.Printf("找到 %d 个项目目录", len(entries))
+
+	reader := claude.NewReader()
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		projectDir := filepath.Join(projectsDir, entry.Name())
+		jsonlFiles, err := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		if err != nil {
+			log.Printf("WARN: 查找会话文件失败 %s: %v", projectDir, err)
+			continue
+		}
+
+		log.Printf("项目 %s: 找到 %d 个会话文件", entry.Name(), len(jsonlFiles))
+
+		for _, jsonlPath := range jsonlFiles {
+			sess, err := reader.Read(jsonlPath)
+			if err != nil {
+				log.Printf("读取会话文件失败 %s: %v", jsonlPath, err)
+				continue
+			}
+
+			if sess != nil {
+				sessions = append(sessions, sess)
+			}
+		}
+	}
+
+	log.Printf("共找到 %d 个会话", len(sessions))
+
+	return sessions, nil
 }

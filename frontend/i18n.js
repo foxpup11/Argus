@@ -7,7 +7,7 @@ const i18n = {
         monitor: '监控',
 
         // Tab 导航
-        dashboard: 'Token 概览',
+        dashboard: '仪表盘',
         sessionsTab: '会话管理',
         continuityTab: '多会话接力',
 
@@ -217,6 +217,32 @@ const i18n = {
         buildTool: '构建工具',
         features: '特性',
         noProjects: '未找到项目',
+
+        // 合规审计
+        complianceAudit: '合规审计',
+        complianceTab: '合规审计',
+        complianceScore: '合规分数',
+        averageScore: '平均分数',
+        auditedSessions: '已审计会话',
+        totalSessions: '总会话数',
+        violationTypes: '违规类型',
+        noViolations: '无违规记录，所有会话均符合 CLAUDE.md 规则',
+        exportReport: '导出报告',
+        complianceReport: '合规审计报告',
+        generatedAt: '生成时间',
+        times: '次',
+        high: '高',
+        medium: '中',
+        low: '低',
+        violationDetails: '违规详情',
+        auditFailed: '审计失败',
+        startAudit: '开始审计',
+        auditing: '审计中...',
+        auditInProgress: '正在使用 LLM 分析 CLAUDE.md 规则并审计会话...',
+        auditHint: '这可能需要几分钟时间，请耐心等待',
+        noClaudeMD: '未找到 CLAUDE.md 文件，请先在知识库中创建',
+        auditErrorHint: '请确认已配置 LLM 并重试',
+        clickAuditHint: '点击"开始审计"按钮，LLM 将自动分析 CLAUDE.md 规则并审计所有会话',
         openFileLocationFailed: '打开文件位置失败',
 
         // 多会话接力
@@ -327,6 +353,7 @@ const i18n = {
         llmTestFailed: '连接失败',
         llmConfigSaved: 'LLM 配置已保存',
         llmConfigFailed: '保存失败',
+        saveFailed: '保存失败',
         llmEnterAPIKey: '请先输入 API Key',
         llmTesting: '测试中...',
         llmProviderHint: '填写兼容 OpenAI 或 Claude API 的服务商端点地址',
@@ -338,7 +365,7 @@ const i18n = {
         monitor: 'Monitor',
 
         // Tab Navigation
-        dashboard: 'Token Overview',
+        dashboard: 'Dashboard',
         sessionsTab: 'Sessions',
         continuityTab: 'Continuity',
 
@@ -658,9 +685,36 @@ const i18n = {
         llmTestFailed: 'Connection failed',
         llmConfigSaved: 'LLM config saved',
         llmConfigFailed: 'Save failed',
+        saveFailed: 'Save failed',
         llmEnterAPIKey: 'Please enter API Key first',
         llmTesting: 'Testing...',
         llmProviderHint: 'Enter a URL compatible with OpenAI or Claude API',
+
+        // Compliance Audit
+        complianceAudit: 'Compliance Audit',
+        complianceTab: 'Compliance Audit',
+        complianceScore: 'Compliance Score',
+        averageScore: 'Average Score',
+        auditedSessions: 'Audited Sessions',
+        totalSessions: 'Total Sessions',
+        violationTypes: 'Violation Types',
+        noViolations: 'No violations found. All sessions comply with CLAUDE.md rules.',
+        exportReport: 'Export Report',
+        complianceReport: 'Compliance Audit Report',
+        generatedAt: 'Generated at',
+        times: 'times',
+        high: 'High',
+        medium: 'Medium',
+        low: 'Low',
+        violationDetails: 'Violation Details',
+        auditFailed: 'Audit failed',
+        startAudit: 'Start Audit',
+        auditing: 'Auditing...',
+        auditInProgress: 'Analyzing CLAUDE.md rules and auditing sessions with LLM...',
+        auditHint: 'This may take a few minutes, please wait',
+        noClaudeMD: 'CLAUDE.md not found. Please create one in Knowledge first.',
+        auditErrorHint: 'Please ensure LLM is configured and try again',
+        clickAuditHint: 'Click "Start Audit" to analyze CLAUDE.md rules and audit all sessions with LLM',
     }
 };
 

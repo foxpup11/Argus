@@ -42,8 +42,9 @@ type SearchFilters struct {
 
 // Engine 知识管理引擎
 type Engine struct {
-	homeDir string
-	mu      sync.RWMutex
+	homeDir      string
+	mu           sync.RWMutex
+	projectRoots []string // 缓存的项目根目录列表
 }
 
 // NewEngine 创建新的知识管理引擎
@@ -253,6 +254,11 @@ func (e *Engine) validatePath(path string) error {
 		filepath.Join(e.homeDir, ".claude"),
 	}
 
+	// 添加缓存的项目根目录
+	e.mu.RLock()
+	allowedDirs = append(allowedDirs, e.projectRoots...)
+	e.mu.RUnlock()
+
 	for _, dir := range allowedDirs {
 		absDir, err := filepath.Abs(dir)
 		if err != nil {
@@ -272,6 +278,41 @@ func (e *Engine) validatePath(path string) error {
 	}
 
 	return fmt.Errorf("access denied: path outside allowed directory")
+}
+
+// RefreshProjectRoots 刷新项目根目录缓存
+// 从会话文件中提取所有项目根目录，用于验证路径访问权限
+func (e *Engine) RefreshProjectRoots() error {
+	projectsDir := filepath.Join(e.homeDir, ".claude", "projects")
+
+	entries, err := os.ReadDir(projectsDir)
+	if err != nil {
+		// 如果目录不存在，清空缓存
+		e.mu.Lock()
+		e.projectRoots = nil
+		e.mu.Unlock()
+		return nil
+	}
+
+	var roots []string
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		projectDir := filepath.Join(projectsDir, entry.Name())
+		actualRoot := e.findProjectRootFromSessions(projectDir)
+		if actualRoot != "" {
+			roots = append(roots, actualRoot)
+		}
+	}
+
+	e.mu.Lock()
+	e.projectRoots = roots
+	e.mu.Unlock()
+
+	return nil
 }
 
 // CreateDocument 创建新文档

@@ -168,7 +168,8 @@ function toggleSectionPreview() {
     isClaudeMDPreviewMode = !isClaudeMDPreviewMode;
 
     const content = document.getElementById('sectionEditorContent');
-    const toggleBtn = document.querySelector('.toggle-preview-btn');
+    const footerToggleBtn = document.querySelector('.toggle-preview-btn');
+    const headerEditBtn = document.getElementById('claudeMDEditBtn');
 
     if (!content) return;
 
@@ -179,7 +180,12 @@ function toggleSectionPreview() {
         // 显示预览
         const section = claudeMDSections[currentSectionIndex];
         content.innerHTML = `<div class="section-preview markdown-body">${renderMarkdown(section.content)}</div>`;
-        if (toggleBtn) toggleBtn.classList.add('active');
+        if (footerToggleBtn) footerToggleBtn.classList.add('active');
+        // 更新头部按钮为编辑模式
+        if (headerEditBtn) {
+            headerEditBtn.querySelector('span').textContent = t('edit') || '编辑';
+            headerEditBtn.querySelector('svg').innerHTML = '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>';
+        }
     } else {
         // 显示编辑器
         const section = claudeMDSections[currentSectionIndex];
@@ -188,7 +194,12 @@ function toggleSectionPreview() {
                       placeholder="${t('inputMarkdown') || '输入 Markdown 内容...'}"
                       oninput="onSectionContentChange()">${escapeHtml(section.content)}</textarea>
         `;
-        if (toggleBtn) toggleBtn.classList.remove('active');
+        if (footerToggleBtn) footerToggleBtn.classList.remove('active');
+        // 更新头部按钮为预览模式
+        if (headerEditBtn) {
+            headerEditBtn.querySelector('span').textContent = t('preview') || '预览';
+            headerEditBtn.querySelector('svg').innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+        }
     }
 }
 

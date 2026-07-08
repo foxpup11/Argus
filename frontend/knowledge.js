@@ -4,8 +4,9 @@
 // 知识库状态
 let currentKnowledgeDocs = [];
 let currentKnowledgeDoc = null;
-let currentKnowledgeType = 'all';
+let currentKnowledgeType = 'plans';
 let isKnowledgeEditing = false;
+let isKnowledgeComplianceView = false;
 
 // ============================================
 // Context Menu Event Delegation
@@ -40,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Initialization
 // ============================================
 
-async function loadKnowledgeDocuments(type = 'all', project = '') {
+async function loadKnowledgeDocuments(type = 'plans', project = '') {
     try {
         const docs = await window.go.main.App.GetKnowledgeDocuments(type, project);
         currentKnowledgeDocs = docs;
@@ -59,8 +60,8 @@ function renderKnowledgeDocList(docs) {
     const container = document.getElementById('knowledgeDocList');
     if (!container) return;
 
-    // 记忆模式下显示所有项目
-    if (currentKnowledgeType === 'memory') {
+    // 记忆和CLAUDE.md模式下显示所有项目
+    if (currentKnowledgeType === 'memory' || currentKnowledgeType === 'claudemd') {
         renderMemoryProjectList(docs);
         return;
     }
@@ -332,6 +333,9 @@ async function selectKnowledgeDoc(path) {
         const doc = await window.go.main.App.GetKnowledgeDocument(path);
         currentKnowledgeDoc = doc;
 
+        // 关闭合规审计视图（如果打开的话）
+        closeKnowledgeComplianceAudit();
+
         // 更新列表高亮（使用 data-path 属性精确匹配）
         document.querySelectorAll('.knowledge-doc-item').forEach(item => {
             const itemPath = item.getAttribute('data-path');
@@ -341,6 +345,7 @@ async function selectKnowledgeDoc(path) {
         // 更新工具栏
         const docName = document.getElementById('knowledgeDocName');
         const docType = document.getElementById('knowledgeDocType');
+        const auditBtn = document.getElementById('knowledgeAuditBtn');
         if (docName) docName.textContent = doc.name;
         if (docType) {
             const typeLabels = { plans: 'Plan', memory: 'Memory', claudemd: 'CLAUDE.md' };
@@ -348,8 +353,18 @@ async function selectKnowledgeDoc(path) {
             docType.className = `doc-type-badge ${doc.type}`;
         }
 
+        // 判断是否为 CLAUDE.md 文档（类型或文件名匹配）
+        const isClaudeMD = doc.type === 'claudemd' ||
+            (doc.name && doc.name.toUpperCase() === 'CLAUDE.MD') ||
+            (doc.path && doc.path.toUpperCase().endsWith('/CLAUDE.MD'));
+
+        // CLAUDE.md 文档显示合规审计按钮
+        if (auditBtn) {
+            auditBtn.style.display = isClaudeMD ? 'inline-flex' : 'none';
+        }
+
         // 根据文档类型切换编辑器
-        if (doc.type === 'claudemd') {
+        if (isClaudeMD) {
             // CLAUDE.md 使用分节编辑器
             hideDefaultEditors();
             showClaudeMDEditor();
@@ -854,7 +869,7 @@ async function confirmCreateDoc() {
         return;
     }
 
-    if (docType === 'memory' && !selectedProject) {
+    if ((docType === 'memory' || docType === 'claudemd') && !selectedProject) {
         showToast('请选择项目');
         return;
     }
@@ -1051,3 +1066,102 @@ function handleRenameKeydown(event) {
         document.body.style.userSelect = '';
     });
 })();
+
+// ============================================
+// Compliance Audit Sub-View (知识库内嵌)
+// ============================================
+
+/**
+ * 打开合规审计子视图（从知识库工具栏触发）
+ */
+function openKnowledgeComplianceAudit() {
+    isKnowledgeComplianceView = true;
+
+    // 隐藏文档编辑器相关视图
+    const preview = document.getElementById('knowledgePreview');
+    const editor = document.getElementById('knowledgeEditor');
+    const claudeEditor = document.getElementById('claudeMDEditor');
+    const complianceView = document.getElementById('knowledgeComplianceView');
+
+    if (preview) preview.style.display = 'none';
+    if (editor) editor.style.display = 'none';
+    if (claudeEditor) claudeEditor.style.display = 'none';
+    if (complianceView) complianceView.style.display = 'flex';
+
+    // 隐藏工具栏右侧按钮
+    const editBtn = document.getElementById('knowledgeEditBtn');
+    const saveBtn = document.getElementById('knowledgeSaveBtn');
+    const auditBtn = document.getElementById('knowledgeAuditBtn');
+    if (editBtn) editBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (auditBtn) auditBtn.style.display = 'none';
+
+    // 设置当前审计的项目名
+    if (currentKnowledgeDoc) {
+        currentProjectForAudit = currentKnowledgeDoc.project || '';
+    }
+
+    // 初始化合规审计（使用当前 CLAUDE.md 路径）
+    initComplianceForKnowledge();
+}
+
+/**
+ * 关闭合规审计子视图，恢复文档视图
+ */
+function closeKnowledgeComplianceAudit() {
+    if (!isKnowledgeComplianceView) return;
+    isKnowledgeComplianceView = false;
+
+    const complianceView = document.getElementById('knowledgeComplianceView');
+    if (complianceView) complianceView.style.display = 'none';
+
+    // 恢复文档视图
+    if (currentKnowledgeDoc) {
+        const isClaudeMD = currentKnowledgeDoc.type === 'claudemd' ||
+            (currentKnowledgeDoc.name && currentKnowledgeDoc.name.toUpperCase() === 'CLAUDE.MD') ||
+            (currentKnowledgeDoc.path && currentKnowledgeDoc.path.toUpperCase().endsWith('/CLAUDE.MD'));
+
+        if (isClaudeMD) {
+            showClaudeMDEditor();
+        } else {
+            showDefaultEditors();
+            const editBtn = document.getElementById('knowledgeEditBtn');
+            if (editBtn) editBtn.style.display = 'inline-flex';
+        }
+
+        // 恢复合规审计按钮（仅 CLAUDE.md）
+        const auditBtn = document.getElementById('knowledgeAuditBtn');
+        if (auditBtn && isClaudeMD) {
+            auditBtn.style.display = 'inline-flex';
+        }
+    }
+}
+
+/**
+ * 为知识库初始化合规审计（设置审计目标路径和项目名）
+ */
+async function initComplianceForKnowledge() {
+    // 重置审计按钮状态
+    updateAuditButton(false);
+
+    // 判断是否为 CLAUDE.md（类型或文件名匹配）
+    const isClaudeMD = currentKnowledgeDoc &&
+        (currentKnowledgeDoc.type === 'claudemd' ||
+         (currentKnowledgeDoc.name && currentKnowledgeDoc.name.toUpperCase() === 'CLAUDE.MD') ||
+         (currentKnowledgeDoc.path && currentKnowledgeDoc.path.toUpperCase().endsWith('/CLAUDE.MD')));
+
+    // 如果有当前选中的 CLAUDE.md，设置路径和项目名
+    if (isClaudeMD) {
+        currentClaudeMDPathForAudit = currentKnowledgeDoc.path;
+        currentProjectForAudit = currentKnowledgeDoc.project || '';
+    } else {
+        // 尝试获取默认 CLAUDE.md 路径
+        const path = await getCurrentClaudeMDPath();
+        currentClaudeMDPathForAudit = path;
+        currentProjectForAudit = '';
+    }
+}
+
+// 存储当前审计使用的 CLAUDE.md 路径和项目名
+let currentClaudeMDPathForAudit = null;
+let currentProjectForAudit = '';
