@@ -108,6 +108,18 @@
         <!-- ============================================ -->
         <div id="dashboardPanel" class="tab-panel active">
             <div class="dashboard">
+                <!-- 子窗口 Tab 栏 -->
+                <div class="dashboard-subtabs">
+                    <button class="dashboard-subtab active" data-subtab="token-overview" onclick="switchDashboardSubtab('token-overview')">
+                        <span data-i18n="tokenOverview">Token概览</span>
+                    </button>
+                    <button class="dashboard-subtab" data-subtab="context-health" onclick="switchDashboardSubtab('context-health')">
+                        <span data-i18n="contextHealth">上下文健康</span>
+                    </button>
+                </div>
+
+                <!-- Token概览 面板 -->
+                <div class="dashboard-subtab-panel active" id="panel-token-overview">
                 <!-- Overview Cards -->
                 <div class="overview-cards">
                     <div class="overview-card">
@@ -228,6 +240,106 @@
                         </div>
                     </div>
                 </div>
+                </div><!-- /panel-token-overview -->
+
+                <!-- 上下文健康 面板 -->
+                <div class="dashboard-subtab-panel" id="panel-context-health">
+                    <!-- 概览卡片 -->
+                    <div class="overview-cards ctx-overview-cards">
+                        <div class="overview-card">
+                            <div class="card-icon ctx-icon-avg">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                            </div>
+                            <div class="card-info">
+                                <span class="card-label" data-i18n="avgContextUsage">平均上下文</span>
+                                <span class="card-value" id="ctxAvgUsage">—</span>
+                            </div>
+                        </div>
+                        <div class="overview-card">
+                            <div class="card-icon ctx-icon-max">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                                    <polyline points="17 6 23 6 23 12"/>
+                                </svg>
+                            </div>
+                            <div class="card-info">
+                                <span class="card-label" data-i18n="maxContextUsage">最高上下文</span>
+                                <span class="card-value" id="ctxMaxUsage">—</span>
+                            </div>
+                        </div>
+                        <div class="overview-card">
+                            <div class="card-icon ctx-icon-score">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                                </svg>
+                            </div>
+                            <div class="card-info">
+                                <span class="card-label" data-i18n="avgHealthScore">健康评分</span>
+                                <span class="card-value" id="ctxAvgScore">—</span>
+                            </div>
+                        </div>
+                        <div class="overview-card">
+                            <div class="card-icon ctx-icon-alert">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                    <line x1="12" y1="9" x2="12" y2="13"/>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                </svg>
+                            </div>
+                            <div class="card-info">
+                                <span class="card-label" data-i18n="contextAlerts">上下文告警</span>
+                                <span class="card-value" id="ctxAlertCount">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 上下文增长趋势图 -->
+                    <div class="dashboard-row">
+                        <div class="dashboard-card trend-card">
+                            <div class="card-title">
+                                <h3 data-i18n="contextGrowthTrend">上下文增长趋势</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="ctxGrowthChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 健康评分分布 + 会话列表 -->
+                    <div class="dashboard-row two-col">
+                        <div class="dashboard-card">
+                            <div class="card-title">
+                                <h3 data-i18n="healthScoreDist">健康评分分布</h3>
+                            </div>
+                            <div class="chart-container" style="height: 220px;">
+                                <canvas id="ctxScoreChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-title">
+                                <h3 data-i18n="sessionHealthList">会话健康列表</h3>
+                            </div>
+                            <div class="dashboard-table-wrapper">
+                                <table class="dashboard-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-i18n="session">会话</th>
+                                            <th data-i18n="model">模型</th>
+                                            <th data-i18n="contextUsage">上下文</th>
+                                            <th data-i18n="score">评分</th>
+                                            <th data-i18n="status">状态</th>
+                                            <th data-i18n="compression">压缩</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ctxHealthTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- /panel-context-health -->
             </div>
         </div>
 
@@ -1171,6 +1283,7 @@
 
     <script src="./i18n.js"></script>
     <script src="./dashboard.js"></script>
+    <script src="./context-health.js"></script>
     <script src="./app.js"></script>
     <script src="./knowledge.js"></script>
     <script src="./claudemd-editor.js"></script>

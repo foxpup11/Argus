@@ -5,6 +5,7 @@
 let currentComplianceOverview = null;
 let currentRules = [];
 let isAuditing = false;
+let auditTimer = null;
 
 // ============================================
 // Initialization
@@ -54,6 +55,7 @@ async function startComplianceAudit() {
     } finally {
         isAuditing = false;
         updateAuditButton(false);
+        if (auditTimer) { clearInterval(auditTimer); auditTimer = null; }
     }
 }
 
@@ -103,13 +105,24 @@ function showAuditProgress() {
     const container = document.getElementById('knowledgeAuditResult');
     if (!container) return;
 
+    const startTime = Date.now();
+
     container.innerHTML = `
         <div class="audit-loading">
             <div class="audit-spinner"></div>
             <p>${t('auditInProgress') || '正在使用 LLM 分析 CLAUDE.md 规则并审计会话...'}</p>
-            <p class="audit-loading-hint">${t('auditHint') || '这可能需要几分钟时间，请耐心等待'}</p>
+            <p class="audit-loading-hint" id="auditElapsed"></p>
         </div>
     `;
+
+    // 更新已用时间
+    if (auditTimer) clearInterval(auditTimer);
+    auditTimer = setInterval(() => {
+        const el = document.getElementById('auditElapsed');
+        if (!el) { clearInterval(auditTimer); auditTimer = null; return; }
+        const secs = Math.floor((Date.now() - startTime) / 1000);
+        el.textContent = (t('auditElapsed') || '已用时') + ' ' + secs + 's';
+    }, 1000);
 }
 
 function showAuditError(message) {

@@ -86,7 +86,7 @@ func (e *Engine) GetComplianceOverview(ctx context.Context, sessions []*session.
 	}
 
 	results := make([]result, len(sessions))
-	sem := make(chan struct{}, 3) // 最多 3 个并发 LLM 调用
+	sem := make(chan struct{}, 5) // 最多 5 个并发 LLM 调用
 	var wg sync.WaitGroup
 
 	for i, sess := range sessions {
@@ -97,6 +97,7 @@ func (e *Engine) GetComplianceOverview(ctx context.Context, sessions []*session.
 			defer func() { <-sem }()
 
 			score, err := e.AuditSession(ctx, rules, s)
+			log.Printf("会话审计进度: %d/%d (会话 %s)", idx+1, len(sessions), s.ID[:8])
 			results[idx] = result{index: idx, score: score, err: err}
 		}(i, sess)
 	}

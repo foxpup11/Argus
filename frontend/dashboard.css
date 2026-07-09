@@ -2,6 +2,50 @@
    Dashboard — Token Analytics Styles
    ============================================ */
 
+/* ==============================
+   仪表盘子窗口 Tab 栏
+   ============================== */
+
+.dashboard-subtabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+}
+
+.dashboard-subtab {
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: -1px;
+    font-family: inherit;
+}
+
+.dashboard-subtab:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.dashboard-subtab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.dashboard-subtab-panel {
+    display: none;
+}
+
+.dashboard-subtab-panel.active {
+    display: block;
+}
+
 /* Tab Panel Visibility */
 .tab-panel {
     display: none;
@@ -618,4 +662,283 @@
     background: var(--warning-light);
     padding: 1px 2px;
     border-radius: 2px;
+}
+
+/* ==============================
+   上下文健康仪表盘 — Apple/Google Design
+   ============================== */
+
+/* 上下文健康概览卡片 */
+.ctx-overview-cards {
+    gap: 14px !important;
+}
+
+.ctx-overview-cards .overview-card {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ctx-overview-cards .overview-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+}
+
+[data-theme="dark"] .ctx-overview-cards .overview-card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.04);
+}
+[data-theme="dark"] .ctx-overview-cards .overview-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+/* 上下文健康专属图标色 */
+.ctx-overview-cards .card-icon.ctx-icon-avg {
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.12), rgba(0, 122, 255, 0.04));
+    color: #007aff;
+}
+.ctx-overview-cards .card-icon.ctx-icon-max {
+    background: linear-gradient(135deg, rgba(255, 149, 0, 0.12), rgba(255, 149, 0, 0.04));
+    color: #ff9500;
+}
+.ctx-overview-cards .card-icon.ctx-icon-score {
+    background: linear-gradient(135deg, rgba(52, 199, 89, 0.12), rgba(52, 199, 89, 0.04));
+    color: #34c759;
+}
+.ctx-overview-cards .card-icon.ctx-icon-alert {
+    background: linear-gradient(135deg, rgba(255, 59, 48, 0.12), rgba(255, 59, 48, 0.04));
+    color: #ff3b30;
+}
+
+[data-theme="dark"] .ctx-overview-cards .card-icon.ctx-icon-avg {
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.2), rgba(10, 132, 255, 0.08));
+    color: #0a84ff;
+}
+[data-theme="dark"] .ctx-overview-cards .card-icon.ctx-icon-max {
+    background: linear-gradient(135deg, rgba(255, 159, 10, 0.2), rgba(255, 159, 10, 0.08));
+    color: #ff9f0a;
+}
+[data-theme="dark"] .ctx-overview-cards .card-icon.ctx-icon-score {
+    background: linear-gradient(135deg, rgba(48, 209, 88, 0.2), rgba(48, 209, 88, 0.08));
+    color: #30d158;
+}
+[data-theme="dark"] .ctx-overview-cards .card-icon.ctx-icon-alert {
+    background: linear-gradient(135deg, rgba(255, 69, 58, 0.2), rgba(255, 69, 58, 0.08));
+    color: #ff453a;
+}
+
+/* 上下文趋势图卡片 */
+.ctx-overview-cards ~ .dashboard-row .dashboard-card {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+[data-theme="dark"] .ctx-overview-cards ~ .dashboard-row .dashboard-card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+/* 上下文健康卡片标题 */
+#panel-context-health .card-title {
+    padding: 14px 20px 10px;
+    border-bottom: none;
+}
+
+#panel-context-health .card-title h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+/* 上下文健康图表容器 */
+#panel-context-health .chart-container {
+    padding: 4px 16px 12px;
+}
+
+/* 上下文健康双列布局 */
+#panel-context-health .dashboard-row.two-col {
+    gap: 14px;
+}
+
+#panel-context-health .dashboard-row.two-col .dashboard-card {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+[data-theme="dark"] #panel-context-health .dashboard-row.two-col .dashboard-card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+/* 上下文使用率进度条 — 精致版 */
+.ctx-usage-bar {
+    width: 100%;
+    max-width: 120px;
+    height: 5px;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+.ctx-usage-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ctx-usage-fill.ctx-level-excellent { background: var(--success); }
+.ctx-usage-fill.ctx-level-good { background: var(--accent); }
+.ctx-usage-fill.ctx-level-warning { background: var(--warning); }
+.ctx-usage-fill.ctx-level-critical { background: var(--danger); }
+
+.ctx-usage-text {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    vertical-align: middle;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 健康评分徽章 — 精致圆形 */
+.ctx-score-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 28px;
+    padding: 0 6px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+.ctx-score-badge.ctx-level-excellent {
+    background: rgba(52, 199, 89, 0.12);
+    color: var(--success);
+}
+.ctx-score-badge.ctx-level-good {
+    background: rgba(0, 122, 255, 0.12);
+    color: var(--accent);
+}
+.ctx-score-badge.ctx-level-warning {
+    background: rgba(255, 149, 0, 0.12);
+    color: var(--warning);
+}
+.ctx-score-badge.ctx-level-critical {
+    background: rgba(255, 59, 48, 0.12);
+    color: var(--danger);
+}
+
+/* 健康等级标签 */
+.ctx-level-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.ctx-level-badge.ctx-level-excellent {
+    background: rgba(52, 199, 89, 0.10);
+    color: var(--success);
+}
+.ctx-level-badge.ctx-level-good {
+    background: rgba(0, 122, 255, 0.10);
+    color: var(--accent);
+}
+.ctx-level-badge.ctx-level-warning {
+    background: rgba(255, 149, 0, 0.10);
+    color: var(--warning);
+}
+.ctx-level-badge.ctx-level-critical {
+    background: rgba(255, 59, 48, 0.10);
+    color: var(--danger);
+}
+
+/* 会话 ID 单元格 */
+.session-id-cell {
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: -0.01em;
+}
+
+/* 压缩事件标签 — 精致胶囊 */
+.ctx-compress-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(0, 122, 255, 0.08);
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.ctx-compress-tag::before {
+    content: '⟳';
+    font-size: 10px;
+}
+
+.ctx-compress-tag.high {
+    background: rgba(255, 149, 0, 0.10);
+    color: var(--warning);
+}
+
+/* 上下文健康表格增强 */
+#panel-context-health .dashboard-table td {
+    padding: 10px 14px;
+    vertical-align: middle;
+}
+
+#panel-context-health .dashboard-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+#panel-context-health .dashboard-table tbody tr:hover {
+    background: var(--bg-hover);
+}
+
+/* 空状态优化 */
+#panel-context-health .empty-state-cell {
+    padding: 40px 16px !important;
+    color: var(--text-tertiary);
+    font-size: 13px;
+}
+
+/* 加载状态 — 顶部细线进度条 */
+#panel-context-health.loading {
+    position: relative;
+}
+
+#panel-context-health.loading::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: ctx-loading-slide 1.2s ease-in-out infinite;
+    z-index: 10;
+    border-radius: 1px;
+}
+
+@keyframes ctx-loading-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
 }

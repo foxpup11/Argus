@@ -3,6 +3,23 @@
 
 let trendChart = null;
 
+// ---- 子窗口 Tab 切换 ----
+
+function switchDashboardSubtab(tabId) {
+    // 更新按钮状态
+    document.querySelectorAll('.dashboard-subtab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.subtab === tabId);
+    });
+    // 更新面板显示
+    document.querySelectorAll('.dashboard-subtab-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === 'panel-' + tabId);
+    });
+    // 按需加载子窗口数据
+    if (tabId === 'context-health' && typeof loadContextHealth === 'function') {
+        loadContextHealth();
+    }
+}
+
 // Load and render the full dashboard
 async function loadDashboard() {
     try {

@@ -476,6 +476,16 @@ func (e *Engine) readDocument(path string) (*KnowledgeDoc, error) {
 		docType = DocTypeMemory
 	}
 
+	// 检测 CLAUDE.md 文件（通过文件名匹配）
+	fileName := filepath.Base(path)
+	if strings.EqualFold(fileName, "CLAUDE.md") {
+		docType = DocTypeClaudeMD
+		// 如果项目名尚未确定，从 ~/.claude/projects/ 中查找匹配的项目
+		if project == "" {
+			project = e.findProjectForClaudeMD(path)
+		}
+	}
+
 	// 解析 YAML frontmatter
 	frontmatter, body := ParseFrontmatter(string(content))
 
@@ -502,4 +512,48 @@ func (e *Engine) readDocument(path string) (*KnowledgeDoc, error) {
 		UpdatedAt:   info.ModTime(),
 		Size:        info.Size(),
 	}, nil
+}
+
+// findProjectForClaudeMD 从 ~/.claude/projects/ 目录中查找与 CLAUDE.md 路径匹配的项目
+// 通过读取会话文件中的 cwd 字段，找到实际项目根目录包含 CLAUDE.md 所在目录的项目
+func (e *Engine) findProjectForClaudeMD(claudeMDPath string) string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	projectsDir := filepath.Join(homeDir, ".claude", "projects")
+	entries, err := os.ReadDir(projectsDir)
+	if err != nil {
+		return ""
+	}
+
+	// CLAUDE.md 所在的目录
+	claudeMDDir := filepath.Dir(claudeMDPath)
+	claudeMDDir = strings.ToLower(filepath.Clean(claudeMDDir))
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		projectDir := filepath.Join(projectsDir, entry.Name())
+
+		// 从 JSONL 会话文件中提取 cwd
+		jsonlFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		for _, jsonlPath := range jsonlFiles {
+			cwd := e.extractCWDFromJSONL(jsonlPath)
+			if cwd == "" {
+				continue
+			}
+
+			// 检查 cwd 是否匹配 CLAUDE.md 所在目录
+			cwdLower := strings.ToLower(filepath.Clean(cwd))
+			if cwdLower == claudeMDDir || strings.HasPrefix(claudeMDDir, cwdLower) || strings.HasPrefix(cwdLower, claudeMDDir) {
+				return entry.Name()
+			}
+		}
+	}
+
+	return ""
 }

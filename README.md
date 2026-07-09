@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/Go-1.23+-00ADD8?style=for-the-badge&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/Wails-v2-5C2D91?style=for-the-badge" alt="Wails">
   <img src="https://img.shields.io/badge/Platform-Windows-lightgrey?style=for-the-badge" alt="Platform">
-  <img src="https://img.shields.io/badge/Version-v0.6-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v0.7-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
 </p>
 
@@ -140,6 +140,20 @@ LLM 自动从 CLAUDE.md 提取行为规则，逐会话审计 Claude 是否遵守
 | "我说了不要改 config" → CI 挂了才发现 | 自动检测每次违规，生成审计报告 |
 | 规则写了等于没写 | 每个会话的合规评分一目了然 |
 | 手动逐个检查会话 | LLM 并发审计所有会话，结果缓存复用 |
+
+### 🏥 上下文健康仪表盘 —— 知道何时该开新会话
+
+**Claude 越聊越笨？Argus 帮你量化退化。**
+
+Claude Opus 标称 100 万 token 上下文，但在 ~200K 处就开始出现质量退化。Argus 通过分析每次 API 调用的 input_tokens，估算会话的峰值上下文使用量，给出健康评分和退化预警。
+
+| 功能 | 说明 |
+|------|------|
+| 峰值上下文估算 | 追踪所有轮次中最大的 input_tokens，估算实际上下文使用量 |
+| 健康综合评分 | 基于峰值使用率、压缩事件、思考深度等多维度评分（0-100） |
+| 上下文压缩检测 | 自动识别 input_tokens 大幅下降的压缩事件 |
+| 退化信号预警 | 峰值 >50% 警告、>80% 危险，提醒你开新会话 |
+| 趋势可视化 | 折线图展示多会话的上下文增长趋势，200K 限制线一目了然 |
 
 ### 🗂️ 会话管理 —— 你的所有会话，井井有条
 
@@ -383,12 +397,12 @@ Argus 运行在 Claude Code **之外**，这意味着：
 - [x] **会话连续性引擎**（跨会话任务提取 + LLM 增强 + Git 验证）
 - [x] **插件工作室**（Hooks + MCP 可视化配置）
 - [x] **CLAUDE.md 规则遵守审计**（LLM 驱动 + 缓存 + 并发审计）
+- [x] **上下文健康仪表盘**（峰值上下文估算 + 健康评分 + 退化预警 + 趋势图）
 
 ### 进行中 / 计划中
 
 - [ ] **成本异常预警系统** —— Token 消耗速率异常时桌面通知告警
 - [ ] **提示词效能分析器** —— 帮你优化 prompt，提升 AI 响应质量
-- [ ] **上下文健康仪表盘** —— 实时追踪上下文退化，提醒你何时该开新会话
 - [ ] **macOS / Linux 支持** —— Wails 天然跨平台，正在适配
 
 详细技术方案见 [docs/ROADMAP.md](docs/ROADMAP.md)。

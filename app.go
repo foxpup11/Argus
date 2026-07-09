@@ -16,6 +16,7 @@ import (
 	"argus-desktop/internal/analytics"
 	"argus-desktop/internal/common"
 	"argus-desktop/internal/compliance"
+	"argus-desktop/internal/contexthealth"
 	"argus-desktop/internal/continuity"
 	"argus-desktop/internal/diff"
 	"argus-desktop/internal/export"
@@ -49,6 +50,11 @@ type App struct {
 	sessionCache     []SessionInfo
 	sessionCacheMu   sync.RWMutex
 	sessionCacheTime time.Time
+
+	// 上下文健康缓存
+	ctxHealthCache     *contexthealth.OverviewHealth
+	ctxHealthCacheMu   sync.RWMutex
+	ctxHealthCacheTime time.Time
 }
 
 // SessionInfo 会话简要信息（用于列表展示）
@@ -1123,6 +1129,70 @@ func (a *App) GetTokenByModel() ([]analytics.ModelStats, error) {
 		return nil, fmt.Errorf("Token 分析引擎未初始化")
 	}
 	return a.analytics.GetModelBreakdown()
+}
+
+// ============================================
+// Context Health APIs
+// ============================================
+
+// GetContextHealthOverview 获取全局上下文健康概览（带缓存，30秒内复用）
+func (a *App) GetContextHealthOverview() (*contexthealth.OverviewHealth, error) {
+	a.ctxHealthCacheMu.RLock()
+	if a.ctxHealthCache != nil && time.Since(a.ctxHealthCacheTime) < 30*time.Second {
+		defer a.ctxHealthCacheMu.RUnlock()
+		return a.ctxHealthCache, nil
+	}
+	a.ctxHealthCacheMu.RUnlock()
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("获取用户目录失败: %w", err)
+	}
+	claudeDir := filepath.Join(homeDir, ".claude")
+	analyzer := contexthealth.NewAnalyzer()
+	result, err := analyzer.AnalyzeOverview(claudeDir)
+	if err != nil {
+		return nil, err
+	}
+
+	a.ctxHealthCacheMu.Lock()
+	a.ctxHealthCache = result
+	a.ctxHealthCacheTime = time.Now()
+	a.ctxHealthCacheMu.Unlock()
+
+	return result, nil
+}
+
+// GetSessionContextHealth 获取单个会话的上下文健康详情
+func (a *App) GetSessionContextHealth(sessionID string) (*contexthealth.SessionHealth, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("获取用户目录失败: %w", err)
+	}
+	claudeDir := filepath.Join(homeDir, ".claude", "projects")
+
+	// 遍历项目目录查找对应的 JSONL 文件
+	projectDirs, err := filepath.Glob(filepath.Join(claudeDir, "projects", "*"))
+	if err != nil {
+		return nil, fmt.Errorf("遍历项目目录失败: %w", err)
+	}
+
+	for _, projectDir := range projectDirs {
+		jsonlFiles, err := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
+		if err != nil {
+			continue
+		}
+		for _, jsonlPath := range jsonlFiles {
+			base := filepath.Base(jsonlPath)
+			baseName := strings.TrimSuffix(base, ".jsonl")
+			if baseName == sessionID || baseName == sessionID+".jsonl" {
+				analyzer := contexthealth.NewAnalyzer()
+				return analyzer.AnalyzeSession(jsonlPath)
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("未找到会话: %s", sessionID)
 }
 
 // ============================================
@@ -2573,8 +2643,8 @@ func (a *App) AuditSession(sessionID string, claudeMDPath string) (*compliance.C
 	return score, nil
 }
 
-// GetComplianceOverview 获取指定项目的合规概览（LLM 驱动）
-// projectName 为空时审计所有会话，否则只审计该项目的会话
+// GetComplianceOverview 获取指定 CLAUDE.md 的合规概览（LLM 驱动）
+// 根据 claudeMDPath 自动推导所属项目，最多审计 20 个会话
 func (a *App) GetComplianceOverview(claudeMDPath string, projectName string) (*compliance.ComplianceOverview, error) {
 	if a.llmCfg == nil || !a.llmCfg.Enabled || a.llmCfg.APIKey == "" {
 		return nil, fmt.Errorf("LLM 未配置或 API Key 缺失，请先在设置中配置 LLM")
@@ -2589,19 +2659,14 @@ func (a *App) GetComplianceOverview(claudeMDPath string, projectName string) (*c
 		return nil, fmt.Errorf("读取 CLAUDE.md 失败: %w", err)
 	}
 
-	// 根据项目名获取会话
-	var sessions []*session.Session
-	if projectName != "" {
-		sessions, err = a.getSessionsByProject(projectName)
-	} else {
-		sessions, err = a.getAllSessions()
-	}
+	// 根据 CLAUDE.md 路径推导会话范围
+	sessions, err := a.getSessionsForCompliance(claudeMDPath, projectName)
 	if err != nil {
 		log.Printf("获取会话列表失败: %v", err)
 		return nil, fmt.Errorf("获取会话列表失败: %w", err)
 	}
 
-	log.Printf("找到 %d 个项目 [%s] 的会话", len(sessions), projectName)
+	log.Printf("找到 %d 个会话用于合规审计", len(sessions))
 
 	// 创建审计引擎并获取概览
 	engine := compliance.NewEngine(*a.llmCfg)
@@ -2611,6 +2676,56 @@ func (a *App) GetComplianceOverview(claudeMDPath string, projectName string) (*c
 	}
 
 	return overview, nil
+}
+
+// getSessionsForCompliance 根据 CLAUDE.md 路径推导所属项目并获取会话
+// 优先从路径推导项目名，fallbackProject 作为备选，最多返回 20 个会话
+func (a *App) getSessionsForCompliance(claudeMDPath string, fallbackProject string) ([]*session.Session, error) {
+	const maxSessions = 10
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("获取用户目录失败: %w", err)
+	}
+
+	projectsDir := filepath.Join(homeDir, ".claude", "projects")
+
+	// 清理路径用于比较
+	cleanPath := filepath.Clean(claudeMDPath)
+	globalPath := filepath.Join(homeDir, ".claude", "CLAUDE.md")
+
+	// 情况 1：全局 CLAUDE.md（~/.claude/CLAUDE.md）→ 审计所有项目会话
+	if filepath.Clean(globalPath) == cleanPath {
+		log.Printf("全局 CLAUDE.md，审计所有项目会话（最多 %d 个）", maxSessions)
+		return a.getAllSessions(maxSessions)
+	}
+
+	// 情况 2：从路径中提取项目名（CLAUDE.md 在 ~/.claude/projects/<project>/ 下）
+	// 支持路径格式：~/.claude/projects/<project>/... 或 <actualRoot>/CLAUDE.md
+	// 通过检查 projectsDir 前缀来匹配
+	cleanLower := strings.ToLower(cleanPath)
+	projectsDirClean := strings.ToLower(filepath.Clean(projectsDir)) + string(os.PathSeparator)
+
+	if strings.HasPrefix(cleanLower, projectsDirClean) {
+		// 提取 <project> 部分：去掉 projectsDir 前缀，取第一段
+		rest := cleanPath[len(projectsDir)+1:] // 去掉 projectsDir + separator
+		parts := strings.SplitN(rest, string(os.PathSeparator), 2)
+		if len(parts) > 0 && parts[0] != "" {
+			projectName := parts[0]
+			log.Printf("从路径推导项目名: %s", projectName)
+			return a.getSessionsByProject(projectName)
+		}
+	}
+
+	// 情况 3：使用 fallbackProject
+	if fallbackProject != "" && fallbackProject != "global" {
+		log.Printf("使用 fallback 项目名: %s", fallbackProject)
+		return a.getSessionsByProject(fallbackProject)
+	}
+
+	// 情况 4：无法确定项目，审计所有会话
+	log.Printf("无法确定 CLAUDE.md 所属项目，审计所有项目会话（最多 %d 个）", maxSessions)
+	return a.getAllSessions(maxSessions)
 }
 
 // getSessionsByProject 获取指定项目的会话
@@ -2629,7 +2744,6 @@ func (a *App) getSessionsByProject(projectName string) ([]*session.Session, erro
 		return nil, nil
 	}
 
-	var sessions []*session.Session
 	reader := claude.NewReader()
 
 	jsonlFiles, err := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
@@ -2638,12 +2752,36 @@ func (a *App) getSessionsByProject(projectName string) ([]*session.Session, erro
 		return nil, err
 	}
 
-	log.Printf("项目 %s: 找到 %d 个会话文件", projectName, len(jsonlFiles))
-
+	// 按修改时间排序（最新的在前），只审计最近的会话
+	type fileInfo struct {
+		path    string
+		modTime time.Time
+	}
+	var files []fileInfo
 	for _, jsonlPath := range jsonlFiles {
-		sess, err := reader.Read(jsonlPath)
+		info, err := os.Stat(jsonlPath)
 		if err != nil {
-			log.Printf("读取会话文件失败 %s: %v", jsonlPath, err)
+			continue
+		}
+		files = append(files, fileInfo{path: jsonlPath, modTime: info.ModTime()})
+	}
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].modTime.After(files[j].modTime)
+	})
+
+	// 最多审计最近 10 个会话，避免耗时过长
+	maxSessions := 10
+	if len(files) > maxSessions {
+		files = files[:maxSessions]
+	}
+
+	log.Printf("项目 %s: 共 %d 个会话文件，审计最近 %d 个", projectName, len(jsonlFiles), len(files))
+
+	var sessions []*session.Session
+	for _, f := range files {
+		sess, err := reader.Read(f.path)
+		if err != nil {
+			log.Printf("读取会话文件失败 %s: %v", f.path, err)
 			continue
 		}
 		if sess != nil {
@@ -2700,8 +2838,8 @@ func (a *App) loadSession(sessionID string) (*session.Session, error) {
 	return nil, fmt.Errorf("未找到会话: %s", sessionID)
 }
 
-// getAllSessions 获取所有会话
-func (a *App) getAllSessions() ([]*session.Session, error) {
+// getAllSessions 获取所有会话，limit > 0 时限制返回数量
+func (a *App) getAllSessions(limit int) ([]*session.Session, error) {
 	var sessions []*session.Session
 
 	// 使用 os.UserHomeDir() 获取用户目录
@@ -2755,6 +2893,11 @@ func (a *App) getAllSessions() ([]*session.Session, error) {
 	}
 
 	log.Printf("共找到 %d 个会话", len(sessions))
+
+	if limit > 0 && len(sessions) > limit {
+		sessions = sessions[:limit]
+		log.Printf("限制返回 %d 个会话", limit)
+	}
 
 	return sessions, nil
 }

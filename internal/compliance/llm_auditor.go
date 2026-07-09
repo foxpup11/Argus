@@ -89,7 +89,7 @@ func (a *LLMAuditor) buildAuditUserMessage(rules []ComplianceRule, sess *session
 	// 文件变更
 	if len(sess.FileChanges) > 0 {
 		b.WriteString(fmt.Sprintf("\n文件变更 (%d 个文件):\n", len(sess.FileChanges)))
-		limit := 20
+		limit := 10
 		if len(sess.FileChanges) < limit {
 			limit = len(sess.FileChanges)
 		}
@@ -103,8 +103,8 @@ func (a *LLMAuditor) buildAuditUserMessage(rules []ComplianceRule, sess *session
 			// 包含 diff 摘要（截断）
 			if fc.Diff != "" {
 				diffLines := strings.Split(fc.Diff, "\n")
-				if len(diffLines) > 10 {
-					diffLines = diffLines[:10]
+				if len(diffLines) > 5 {
+					diffLines = diffLines[:5]
 					diffLines = append(diffLines, fmt.Sprintf("  ... (共 %d 行)", len(strings.Split(fc.Diff, "\n"))))
 				}
 				for _, line := range diffLines {
@@ -128,7 +128,7 @@ func (a *LLMAuditor) buildAuditUserMessage(rules []ComplianceRule, sess *session
 	}
 	if len(commands) > 0 {
 		b.WriteString(fmt.Sprintf("\n执行的命令 (%d 个):\n", len(commands)))
-		limit := 15
+		limit := 10
 		if len(commands) < limit {
 			limit = len(commands)
 		}

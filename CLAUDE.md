@@ -43,6 +43,7 @@ go test ./internal/session/...
     ├──→ [knowledge] ──→ Plans/Memory/CLAUDE.md
     ├──→ [continuity] ──→ Session handoff summaries (LLM-enhanced)
     ├──→ [compliance] ──→ CLAUDE.md rule compliance audit (LLM-powered)
+    ├──→ [contexthealth] ──→ Context health analysis (peak context, health scoring)
     ├──→ [plugin] ──→ Hook/MCP configuration
     └──→ [monitor] ──→ Real-time file watching (fsnotify)
 ```
@@ -59,6 +60,7 @@ go test ./internal/session/...
 - `internal/risk/` — File change risk assessment engine
 - `internal/monitor/` — fsnotify-based file system watcher
 - `internal/settings/` — Application settings manager
+- `internal/contexthealth/` — Context health analysis engine (peak context estimation, health scoring, degradation alerts)
 - `internal/llm/` — Generic OpenAI-compatible LLM client (used by continuity and compliance)
 - `internal/export/` — Session export (HTML/Markdown)
 
@@ -74,6 +76,7 @@ All frontend code lives in `frontend/` — plain HTML/CSS/JS with no build step:
 - `continuity.js` — Session handoff summary UI
 - `plugin-studio.js` — Hook/MCP configuration UI
 - `compliance.js` — LLM-powered compliance audit UI
+- `context-health.js` — Context health dashboard (trend charts, session health table, score visualization)
 
 ### Data Flow
 
