@@ -346,6 +346,10 @@ Argus 运行在 Claude Code **之外**，这意味着：
 
 ![preview5](docs/images/preview5.png)
 
+![preview6](docs/images/preview6.png)![preview7](docs/images/preview7.png)
+
+![preview8](docs/images/preview8.png)
+
 ---
 
 ## 快速上手
@@ -442,5 +446,5 @@ MIT License —— 自由使用，自由分享。
 ---
 
 <p align="center">
-  <sub>Made with 🧠 by <a href="https://github.com/foxpup11">foxpup11</a></sub>
+  <sub>Made with ❤ by <a href="https://github.com/foxpup11">foxpup11</a></sub>
 </p>
